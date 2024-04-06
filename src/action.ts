@@ -1,8 +1,8 @@
 import { Address } from "./common";
 
 export enum ActionType {
-    Split,
-    Move,
+    Split = "Split",
+    Move = "Move",
 }
 
 export interface SplitAction extends Split {

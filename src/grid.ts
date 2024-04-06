@@ -27,4 +27,8 @@ export class Grid {
         }
         return true;
     }
+
+    filterAvailable(addresses: Address[]): Address[] {
+        return addresses.filter((addr) => !this.getCell(addr).player);
+    }
 }

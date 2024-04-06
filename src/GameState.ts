@@ -82,9 +82,23 @@ export class GameState {
         for (const snake of this.snakes) {
             for (const snakeAddress of snake.segments) {
                 const snakeCell = this.getCell(snakeAddress);
+                snakeCell.markAsOurs();
                 if (snakeCell.player !== this.playerName) {
                     result.push(
                         `[${snake.name}] contains a cell (${snakeCell.address}) that is not us but ${snakeCell.player}.`
+                    );
+                }
+            }
+        }
+        for (const cell of this.grid.cells.values()) {
+            if ((cell.player === this.playerName) !== cell.isMarkedAsOurs()) {
+                if (cell.isMarkedAsOurs()) {
+                    result.push(
+                        `Cell ${cell.address} is marked as ours but owned by ${cell.player}.`
+                    );
+                } else {
+                    result.push(
+                        `Cell ${cell.address} is not marked as ours but owned by us.`
                     );
                 }
             }

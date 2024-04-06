@@ -3,6 +3,8 @@ import "source-map-support/register";
 import * as grpc from "@grpc/grpc-js";
 import { GameState } from "./GameState";
 import { ActionType } from "./action";
+import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
+import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
 import { MyClient } from "./client";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
@@ -12,7 +14,7 @@ import {
     ServerUpdateMessage,
 } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
-import { isDefined } from "./util";
+import { ActionRejecter } from "./strategy";
 
 export const client = new PlayerHostClient(
     "192.168.178.62:5168",
@@ -45,11 +47,19 @@ async function main() {
     gameState.setState(initialGameState);
     const gameUpdates = myClient.subscribe();
     const strategy = new MainStrategy();
-    const actionCheckers = [new StartAddressChecker()];
+    const actionRejecters = [
+        new ActionRejecter([
+            new StartAddressChecker(),
+            new ExistingCellsCollisionChecker(),
+        ]),
+        new NextActionCollisionActionsChecker(),
+    ];
     if (!gameState.running) {
         console.log("WAITING FOR START");
     }
+    let lastFoodLogged: number = 0;
     gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
+        // console.debug("loop");
         if (!gameState.running) {
             console.log("STARTED");
             gameState.run();
@@ -72,45 +82,48 @@ async function main() {
             console.error("NO SNAKES LEFT");
             process.exit(2);
         }
+        if (gameState.foodManager.foods.size === 0) {
+            console.error("NO FOOD LEFT");
+            process.exit(2);
+        }
+        if (gameState.foodManager.foods.size !== lastFoodLogged) {
+            lastFoodLogged = gameState.foodManager.foods.size;
+            console.log("Food available", lastFoodLogged);
+        }
         const actions = strategy.update(gameState);
-        const actionRejections = actionCheckers
-            .flatMap((checker) =>
-                actions.map((action) => {
-                    const reason = checker.check(gameState, action);
-                    if (reason) {
-                        return [action, reason];
-                    } else {
-                        return undefined;
-                    }
-                })
-            )
-            .filter(isDefined);
+        const actionRejections = actionRejecters.flatMap((rejecter) =>
+            rejecter.check(gameState, actions)
+        );
+
         if (actionRejections.length > 0) {
-            for (const [action, reason] of actionRejections) {
+            for (const { action, reason } of actionRejections) {
                 console.warn("rejectAction", action, reason);
             }
         }
         const filteredActions = actions.filter(
             (action) =>
-                !actionRejections.some(([rejAction]) => rejAction === action)
+                !actionRejections.some(
+                    (rejection) => rejection.action === action
+                )
         );
         gameState.applyActions(filteredActions);
         for (const action of filteredActions) {
             switch (action.type) {
                 case ActionType.Move:
                     {
-                        console.log(
-                            `[${action.snakeName}] move`,
-                            action.nextLocation
-                        );
+                        // gameState
+                        //     .getSnake(action.snakeName)
+                        //     ?.log(`move`, action.nextLocation);
                         await myClient.moveSnake(action);
                     }
                     break;
                 case ActionType.Split:
                     {
-                        console.log(
-                            `[${action.oldSnakeName}] split to ${action.newSnakeName} length ${action.snakeSegment}`
-                        );
+                        gameState
+                            .getSnake(action.oldSnakeName)
+                            ?.log(
+                                `split to ${action.newSnakeName} length ${action.snakeSegment}`
+                            );
                         await myClient.splitSnake(action);
                     }
                     break;

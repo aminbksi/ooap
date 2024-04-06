@@ -3,6 +3,7 @@ import { Snake } from "../Snake";
 import { Action, ActionType } from "../action";
 import { nextSteps, sameAddress, toFlat } from "../address";
 import { Address } from "../common";
+import { pickRandom } from "../util";
 import { SnakeStrategy } from "./SnakeStrategy";
 
 export class TargetSnakeStrategy implements SnakeStrategy {
@@ -12,8 +13,8 @@ export class TargetSnakeStrategy implements SnakeStrategy {
         public target: Address
     ) {}
 
-    isDone(): boolean {
-        return this.isTargetReached();
+    isDone(): string | undefined {
+        return this.isTargetReached() ? "target reached" : undefined;
     }
 
     isTargetReached(): boolean {
@@ -21,13 +22,16 @@ export class TargetSnakeStrategy implements SnakeStrategy {
     }
 
     update(): Action[] {
-        const steps = nextSteps(this.snake.head, this.target);
-        if (steps.length > 0) {
+        const possibleNextSteps = nextSteps(this.snake.head, this.target);
+        const availableSteps =
+            this.gameState.grid.filterAvailable(possibleNextSteps);
+        const step = pickRandom(availableSteps);
+        if (step) {
             return [
                 {
                     type: ActionType.Move,
                     snakeName: this.snake.name,
-                    nextLocation: steps[0],
+                    nextLocation: step,
                 },
             ];
         }

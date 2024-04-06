@@ -1,5 +1,5 @@
 import { GameState } from "../GameState";
-import { Action, ActionType } from "../action";
+import { Action } from "../action";
 import { sameAddress } from "../address";
 import { ActionChecker } from "../strategy";
 
