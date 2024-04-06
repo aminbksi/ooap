@@ -1,8 +1,8 @@
-import { Address } from "./common";
+import { Address, FlatAddress } from "./common";
 import { sum } from "./util";
 
 export function sameAddress(addr1: Address, addr2: Address): boolean {
-    return addr1.join(",") === addr2.join(",");
+    return toFlat(addr1) === toFlat(addr2);
 }
 
 export function distance(addr1: Address, addr2: Address): number {
@@ -23,4 +23,8 @@ export function nextSteps(from: Address, to: Address): Address[] {
         }
     }
     return steps;
+}
+
+export function toFlat(addr: Address): FlatAddress {
+    return addr.join(",");
 }

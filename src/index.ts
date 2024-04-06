@@ -38,20 +38,36 @@ async function main() {
         gameSettings.dimensionsList,
         gameSettings.startaddressList,
         PLAYER_NAME,
-        gameSettings.playeridentifier
+        gameSettings.playeridentifier,
+        gameSettings.gamestarted
     );
-    const gameUpdates = myClient.subscribe({
-        playeridentifier: gameSettings.playeridentifier,
-    });
+    const initialGameState = await myClient.getGameState();
+    gameState.setState(initialGameState);
+    const gameUpdates = myClient.subscribe();
     const strategy = new MainStrategy();
     const actionCheckers = [new StartAddressChecker()];
+    if (!gameState.running) {
+        console.log("WAITING FOR START");
+    }
     gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
+        if (!gameState.running) {
+            console.log("STARTED");
+            gameState.run();
+        }
         const update = rawUpdate.toObject();
         // console.log("update", update.updatedcellsList);
         if (update.removedsnakesList.length > 0) {
             console.log("removedSnakes", update.removedsnakesList);
         }
         gameState.update(update);
+        const snakeAdminValidationErrors = gameState.validateSnakes();
+        if (snakeAdminValidationErrors.length > 0) {
+            console.warn(
+                "Snake administration incorrect: ",
+                snakeAdminValidationErrors.join("\n")
+            );
+        }
+
         if (gameState.snakes.length === 0) {
             console.error("NO SNAKES LEFT");
             process.exit(2);
@@ -71,7 +87,7 @@ async function main() {
             .filter(isDefined);
         if (actionRejections.length > 0) {
             for (const [action, reason] of actionRejections) {
-                console.warn("reject", action, reason);
+                console.warn("rejectAction", action, reason);
             }
         }
         const filteredActions = actions.filter(
@@ -84,8 +100,8 @@ async function main() {
                 case ActionType.Move:
                     {
                         console.log(
-                            "move",
-                            action.snakeName + ": " + action.nextLocation
+                            `[${action.snakeName}] move`,
+                            action.nextLocation
                         );
                         await myClient.moveSnake(action);
                     }
@@ -93,10 +109,7 @@ async function main() {
                 case ActionType.Split:
                     {
                         console.log(
-                            "splitted " +
-                                action.oldSnakeName +
-                                " into " +
-                                action.newSnakeName
+                            `[${action.oldSnakeName}] split to ${action.newSnakeName} length ${action.snakeSegment}`
                         );
                         await myClient.splitSnake(action);
                     }

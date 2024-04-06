@@ -1,18 +1,19 @@
-import { PlayerHostClient } from "./generated/player_grpc_pb";
 import * as grpc from "@grpc/grpc-js";
+import { promisify } from "util";
+import { client } from ".";
+import { Move, Split } from "./action";
+import { UUID } from "./common";
+import { PlayerHostClient } from "./generated/player_grpc_pb";
 import {
     EmptyRequest,
     GameSettings,
+    GameStateMessage,
     GameUpdateMessage,
     Move as MoveRequest,
     RegisterRequest,
     SplitRequest,
     SubsribeRequest,
 } from "./generated/player_pb";
-import { promisify } from "util";
-import { Address, UUID } from "./common";
-import { client } from ".";
-import { Move, Split } from "./action";
 
 export class MyClient {
     playerIdentifier: UUID | undefined;
@@ -37,9 +38,17 @@ export class MyClient {
         return settings;
     }
 
-    public subscribe(
-        request: SubsribeRequest.AsObject
-    ): grpc.ClientReadableStream<GameUpdateMessage> {
+    public async getGameState(): Promise<GameStateMessage.AsObject> {
+        const req = new EmptyRequest();
+        const gameState = (
+            await promisify<EmptyRequest, GameStateMessage>(
+                client.getGameState.bind(client)
+            )(req)
+        ).toObject();
+        return gameState;
+    }
+
+    public subscribe(): grpc.ClientReadableStream<GameUpdateMessage> {
         const req = new SubsribeRequest();
         if (!this.playerIdentifier) {
             throw new Error("missing playerIdentifier");

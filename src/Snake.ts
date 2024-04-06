@@ -52,4 +52,8 @@ export class Snake {
         kid.applyMove(action.nextLocation, growKid);
         return kid;
     }
+
+    log(msg: string, ...args: any[]): void {
+        console.log(`[${this.name}:${this.length}] ${msg}`, ...args);
+    }
 }

@@ -1,12 +1,9 @@
 import { GameState } from "../GameState";
 import { Snake } from "../Snake";
 import { Action, ActionType } from "../action";
-import { nextSteps, sameAddress } from "../address";
+import { nextSteps, sameAddress, toFlat } from "../address";
 import { Address } from "../common";
-
-export interface SnakeStrategy {
-    update(): Action[];
-}
+import { SnakeStrategy } from "./SnakeStrategy";
 
 export class TargetSnakeStrategy implements SnakeStrategy {
     constructor(
@@ -14,6 +11,10 @@ export class TargetSnakeStrategy implements SnakeStrategy {
         public snake: Snake,
         public target: Address
     ) {}
+
+    isDone(): boolean {
+        return this.isTargetReached();
+    }
 
     isTargetReached(): boolean {
         return sameAddress(this.target, this.snake.head);
@@ -31,5 +32,9 @@ export class TargetSnakeStrategy implements SnakeStrategy {
             ];
         }
         return [];
+    }
+
+    inspect(): string {
+        return `[${this.constructor.name} target=${toFlat(this.target)}]`;
     }
 }

@@ -1,8 +1,9 @@
 import { Cell } from "./Cell";
+import { FoodManager } from "./FoodManager";
 import { Snake } from "./Snake";
-import { Action, ActionType, Move, Split } from "./action";
+import { Action, ActionType } from "./action";
 import { Address, UUID } from "./common";
-import { GameUpdateMessage } from "./generated/player_pb";
+import { GameStateMessage, GameUpdateMessage } from "./generated/player_pb";
 import { Grid } from "./grid";
 
 export class GameState {
@@ -11,22 +12,46 @@ export class GameState {
     playerIdentifier: string;
     playerName: string;
     startAddress: Address;
+    foodManager = new FoodManager();
+    running: boolean;
 
     constructor(
         dims: number[],
         startAddress: Address,
         playerName: string,
-        playerIdentifier: UUID
+        playerIdentifier: UUID,
+        running: boolean
     ) {
         this.startAddress = startAddress;
         this.grid = new Grid(dims);
         this.snakes.push(new Snake(playerName, [startAddress]));
         this.playerIdentifier = playerIdentifier;
         this.playerName = playerName;
+        this.running = running;
+    }
+
+    run(): void {
+        this.running = true;
     }
 
     getCell(address: Address): Cell {
         return this.grid.getCell(address);
+    }
+
+    setState(gameState: GameStateMessage.AsObject): void {
+        for (const updatedCell of gameState.updatedcellsList) {
+            const cell = new Cell(
+                updatedCell.addressList,
+                updatedCell.foodvalue > 0,
+                updatedCell.player === "" ? undefined : updatedCell.player
+            );
+            this.grid.setCell(updatedCell.addressList, cell);
+            if (updatedCell.foodvalue > 0) {
+                this.foodManager.addFood(updatedCell.addressList);
+            } else {
+                this.foodManager.removeFood(updatedCell.addressList);
+            }
+        }
     }
 
     update(gameUpdate: GameUpdateMessage.AsObject): void {
@@ -37,6 +62,11 @@ export class GameState {
                 updatedCell.player === "" ? undefined : updatedCell.player
             );
             this.grid.setCell(updatedCell.addressList, cell);
+            if (updatedCell.foodvalue > 0) {
+                this.foodManager.addFood(updatedCell.addressList);
+            } else {
+                this.foodManager.removeFood(updatedCell.addressList);
+            }
         }
         if (gameUpdate.removedsnakesList.length > 0) {
             const removedSnakes = new Set(gameUpdate.removedsnakesList);
@@ -45,6 +75,21 @@ export class GameState {
                     !removedSnakes.has(`${this.playerName}:${snake.name}`)
             );
         }
+    }
+
+    validateSnakes(): string[] {
+        let result: string[] = [];
+        for (const snake of this.snakes) {
+            for (const snakeAddress of snake.segments) {
+                const snakeCell = this.getCell(snakeAddress);
+                if (snakeCell.player !== this.playerName) {
+                    result.push(
+                        `[${snake.name}] contains a cell (${snakeCell.address}) that is not us but ${snakeCell.player}.`
+                    );
+                }
+            }
+        }
+        return result;
     }
 
     applyActions(actions: Action[]): void {

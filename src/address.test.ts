@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { nextSteps } from "./address";
 
-describe("address", () => {
+describe("nextSteps", () => {
     it("generates steps for all dimensions", () => {
         const steps = nextSteps([0, 0, 0], [10, 10, 10]);
         expect(steps).toEqual([
