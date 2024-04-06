@@ -1,125 +1,107 @@
 import "source-map-support/register";
 
-import { PlayerHostClient } from "./generated/player_grpc_pb";
 import * as grpc from "@grpc/grpc-js";
+import { GameState } from "./GameState";
+import { ActionType } from "./action";
+import { StartAddressChecker } from "./checkers/StartAddressChecker";
+import { MyClient } from "./client";
+import { PlayerHostClient } from "./generated/player_grpc_pb";
 import {
     EmptyRequest,
-    GameSettings,
     GameUpdateMessage,
-    Move,
-    RegisterRequest,
     ServerUpdateMessage,
-    SplitRequest,
-    SubsribeRequest,
 } from "./generated/player_pb";
-import { promisify } from "util";
-import { GameState } from "./GameState";
-import { Address } from "./common";
+import { MainStrategy } from "./strategies/MainStrategy";
+import { isDefined } from "./util";
 
-const client = new PlayerHostClient(
+export const client = new PlayerHostClient(
     "192.168.178.62:5168",
     grpc.credentials.createInsecure()
 );
 
-console.log("starting?");
+console.log("Subscribing...");
 
 const serverEvents = client.subscribeToServerEvents(new EmptyRequest());
 serverEvents.on("event", function (thing: ServerUpdateMessage) {
     console.log("event", thing.toObject());
 });
 
-console.log("Started?");
-
-const req = new RegisterRequest();
-req.setPlayername("ForTheWin");
-
-export interface SplitSnakeRequest {
-    playerIdentifier: string;
-    oldSnakeName: string;
-    newSnakeName: string;
-    snakeSegment: number;
-    nextLocation: Address;
-}
-
-export interface MakeMoveRequest {
-    playerIdentifier: string;
-    snakeName: string;
-    nextLocation: Address;
-}
-
-export class MyClient {
-    constructor(public client: PlayerHostClient) {}
-
-    public async register(
-        request: RegisterRequest.AsObject
-    ): Promise<GameSettings.AsObject> {
-        const req = new RegisterRequest();
-        req.setPlayername(request.playername);
-        return (
-            await promisify<RegisterRequest, GameSettings>(
-                client.register.bind(client)
-            )(req)
-        ).toObject();
-    }
-
-    public subscribe(
-        request: SubsribeRequest.AsObject
-    ): grpc.ClientReadableStream<GameUpdateMessage> {
-        const req = new SubsribeRequest();
-        req.setPlayeridentifier(request.playeridentifier);
-        return client.subscribe(req);
-    }
-
-    public async splitSnake(request: SplitSnakeRequest): Promise<void> {
-        const req = new SplitRequest();
-        req.setPlayeridentifier(request.playerIdentifier);
-        req.setOldsnakename(request.oldSnakeName);
-        req.setNewsnakename(request.newSnakeName);
-        req.setSnakesegment(request.snakeSegment);
-        req.setNextlocationList(request.nextLocation);
-        await promisify<SplitRequest, EmptyRequest>(
-            client.splitSnake.bind(client)
-        )(req);
-    }
-
-    public async moveSnake(request: MakeMoveRequest): Promise<void> {
-        const req = new Move();
-        req.setPlayeridentifier(request.playerIdentifier);
-        req.setSnakename(request.snakeName);
-        req.setNextlocationList(request.nextLocation);
-        await promisify<Move, EmptyRequest>(client.makeMove.bind(client))(req);
-    }
-}
+console.log("Subscribed");
 
 const myClient = new MyClient(client);
 
+const PLAYER_NAME = "ForTheWin";
 async function main() {
-    const gameSettings = await myClient.register({ playername: "ForTheWin" });
-    console.log("response: ", gameSettings);
+    const gameSettings = await myClient.register({ playername: PLAYER_NAME });
+    console.log("gameSettings", gameSettings);
     const gameState = new GameState(
         gameSettings.dimensionsList,
         gameSettings.startaddressList,
-        "javascript",
+        PLAYER_NAME,
         gameSettings.playeridentifier
     );
     const gameUpdates = myClient.subscribe({
         playeridentifier: gameSettings.playeridentifier,
     });
-    gameUpdates.on("data", async function (update: GameUpdateMessage) {
-        gameState.update(update.toObject());
-        var splits = gameState.getSplits();
-        for (var i = 0; i < splits.length; i++) {
-            var split = splits[i];
-            console.log(
-                "splitted " + split.oldSnakeName + " into " + split.newSnakeName
-            );
-            await myClient.splitSnake(split);
+    const strategy = new MainStrategy();
+    const actionCheckers = [new StartAddressChecker()];
+    gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
+        const update = rawUpdate.toObject();
+        // console.log("update", update.updatedcellsList);
+        if (update.removedsnakesList.length > 0) {
+            console.log("removedSnakes", update.removedsnakesList);
         }
-        var moves = gameState.getMoves();
-        for (var i = 0; i < moves.length; i++) {
-            var move = moves[i];
-            console.log(move.snakeName + ": " + move.nextLocation);
-            await myClient.moveSnake(move);
+        gameState.update(update);
+        if (gameState.snakes.length === 0) {
+            console.error("NO SNAKES LEFT");
+            process.exit(2);
+        }
+        const actions = strategy.update(gameState);
+        const actionRejections = actionCheckers
+            .flatMap((checker) =>
+                actions.map((action) => {
+                    const reason = checker.check(gameState, action);
+                    if (reason) {
+                        return [action, reason];
+                    } else {
+                        return undefined;
+                    }
+                })
+            )
+            .filter(isDefined);
+        if (actionRejections.length > 0) {
+            for (const [action, reason] of actionRejections) {
+                console.warn("reject", action, reason);
+            }
+        }
+        const filteredActions = actions.filter(
+            (action) =>
+                !actionRejections.some(([rejAction]) => rejAction === action)
+        );
+        gameState.applyActions(filteredActions);
+        for (const action of filteredActions) {
+            switch (action.type) {
+                case ActionType.Move:
+                    {
+                        console.log(
+                            "move",
+                            action.snakeName + ": " + action.nextLocation
+                        );
+                        await myClient.moveSnake(action);
+                    }
+                    break;
+                case ActionType.Split:
+                    {
+                        console.log(
+                            "splitted " +
+                                action.oldSnakeName +
+                                " into " +
+                                action.newSnakeName
+                        );
+                        await myClient.splitSnake(action);
+                    }
+                    break;
+            }
         }
     });
 }

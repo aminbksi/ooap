@@ -1,13 +1,17 @@
 import { Address } from "./common";
 
 export class Cell {
-    address: Address = [];
-    hasFood = false;
-    hasPlayer = false;
+    readonly address: Address;
+    readonly hasFood: boolean;
+    readonly player: string | undefined;
 
-    constructor(address: Address, hasFood: boolean, hasPlayer: boolean) {
+    constructor(
+        address: Address,
+        hasFood: boolean = false,
+        player: string | undefined = undefined
+    ) {
         this.hasFood = hasFood;
-        this.hasPlayer = hasPlayer;
+        this.player = player;
         this.address = address;
     }
 }
