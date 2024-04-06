@@ -1,6 +1,7 @@
 import "source-map-support/register";
 
 import * as grpc from "@grpc/grpc-js";
+import { writeFile } from "fs/promises";
 import { GameState } from "./GameState";
 import { ActionType } from "./action";
 import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
@@ -15,6 +16,7 @@ import {
 } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
 import { ActionRejecter } from "./strategy";
+import { isDefined, random } from "./util";
 
 export const client = new PlayerHostClient(
     "192.168.178.62:5168",
@@ -32,7 +34,7 @@ console.log("Subscribed");
 
 const myClient = new MyClient(client);
 
-const PLAYER_NAME = "ForTheWin";
+const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
 async function main() {
     const gameSettings = await myClient.register({ playername: PLAYER_NAME });
     console.log("gameSettings", gameSettings);
@@ -46,7 +48,7 @@ async function main() {
     const initialGameState = await myClient.getGameState();
     gameState.setState(initialGameState);
     const gameUpdates = myClient.subscribe();
-    const strategy = new MainStrategy();
+    const strategy = new MainStrategy(gameState);
     const actionRejecters = [
         new ActionRejecter([
             new StartAddressChecker(),
@@ -58,6 +60,7 @@ async function main() {
         console.log("WAITING FOR START");
     }
     let lastFoodLogged: number = 0;
+    let tickCount = 0;
     gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
         // console.debug("loop");
         if (!gameState.running) {
@@ -90,7 +93,7 @@ async function main() {
             lastFoodLogged = gameState.foodManager.foods.size;
             console.log("Food available", lastFoodLogged);
         }
-        const actions = strategy.update(gameState);
+        const actions = strategy.update();
         const actionRejections = actionRejecters.flatMap((rejecter) =>
             rejecter.check(gameState, actions)
         );
@@ -129,6 +132,30 @@ async function main() {
                     break;
             }
         }
+
+        const snakesWithMoves = new Set(
+            filteredActions
+                .map(
+                    (action) =>
+                        (action.type === ActionType.Move && action.snakeName) ||
+                        undefined
+                )
+                .filter(isDefined)
+        );
+        const missingSnakesMoves = new Set(
+            gameState.snakes.filter((snake) => !snakesWithMoves.has(snake.name))
+        );
+        const strategyText = strategy.inspect();
+        const overallText = [
+            `tick=${tickCount++}`,
+            `food=${gameState.foodManager.foods.size}`,
+            `running=${gameState.running}`,
+            `stuckSnakes=${missingSnakesMoves}`,
+        ];
+        await writeFile(
+            "./state.txt",
+            [overallText, strategyText, ""].join("\n")
+        );
     });
 }
 

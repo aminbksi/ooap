@@ -79,6 +79,9 @@ export class GameState {
 
     validateSnakes(): string[] {
         let result: string[] = [];
+        for (const cell of this.grid.cells.values()) {
+            cell.isOurs = false;
+        }
         for (const snake of this.snakes) {
             for (const snakeAddress of snake.segments) {
                 const snakeCell = this.getCell(snakeAddress);

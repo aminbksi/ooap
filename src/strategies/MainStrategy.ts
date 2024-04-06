@@ -13,12 +13,35 @@ export class MainStrategy implements Strategy {
     snakeStrategies: Map<SnakeName, SnakeStrategy> = new Map();
 
     constructor(
+        public gameState: GameState,
         public saveLength: number = 10,
         public desiredMainSnakes: number = 10
     ) {}
 
-    getNextAddress(gameState: GameState, address: Address): Address {
-        while (true) {
+    update(): Action[] {
+        return [
+            ...this.executeSplitStrategies(),
+            ...this.executeSnakeStrategies(),
+        ];
+    }
+
+    inspect(): string {
+        return this.gameState.snakes
+            .map((snake) => {
+                const strat = this.snakeStrategies.get(snake.name);
+                return `[${snake.name}:${snake.length}] head=${toFlat(
+                    snake.head
+                )} strategy=${strat?.inspect()}`;
+            })
+            .join("\n");
+    }
+
+    getNextAddress(
+        gameState: GameState,
+        address: Address
+    ): Address | undefined {
+        let i = 10;
+        while (i-- > 0) {
             var newaddr = [...address];
             var dim = Math.floor(
                 Math.random() * gameState.grid.dimensions.length
@@ -38,27 +61,41 @@ export class MainStrategy implements Strategy {
         }
     }
 
-    splitSnake(snake: Snake, gameState: GameState, amount: number): Action {
+    splitSnake(
+        snake: Snake,
+        gameState: GameState,
+        amount: number
+    ): Action | undefined {
         const kidSnake = snake.getKid(1);
-        let splitAction: SplitAction = {
-            type: ActionType.Split,
-            newSnakeName: kidSnake.name,
-            oldSnakeName: snake.name,
-            snakeSegment: kidSnake.length,
-            nextLocation: this.getNextAddress(gameState, kidSnake.head),
-        };
-        return splitAction;
+        const next = this.getNextAddress(gameState, kidSnake.head);
+        if (next) {
+            const splitAction: SplitAction = {
+                type: ActionType.Split,
+                newSnakeName: kidSnake.name,
+                oldSnakeName: snake.name,
+                snakeSegment: kidSnake.length,
+                nextLocation: next,
+            };
+            return splitAction;
+        }
     }
 
-    executeSplitStrategies(gameState: GameState): Action[] {
+    executeSplitStrategies(): Action[] {
         const actions: Action[] = [];
-        for (const snake of gameState.snakes) {
-            if (gameState.snakes.length < this.desiredMainSnakes) {
+        let splitCount = 0;
+        for (const snake of this.gameState.snakes) {
+            if (
+                this.gameState.snakes.length + splitCount <
+                this.desiredMainSnakes
+            ) {
                 if (snake.length > 1) {
                     // Split when we have splittable snakes until we have enough snakes.
                     snake.log(`splitting`);
-
-                    actions.push(this.splitSnake(snake, gameState, 1));
+                    const kid = this.splitSnake(snake, this.gameState, 1);
+                    if (kid) {
+                        splitCount++;
+                        actions.push(kid);
+                    }
                 }
             }
         }
@@ -66,9 +103,9 @@ export class MainStrategy implements Strategy {
         return actions;
     }
 
-    executeSnakeStrategies(gameState: GameState): Action[] {
+    executeSnakeStrategies(): Action[] {
         const actions: Action[] = [];
-        for (const snake of gameState.snakes) {
+        for (const snake of this.gameState.snakes) {
             let snakeStrat = this.snakeStrategies.get(snake.name);
             // Remove target if it's no longer applicable
             if (snakeStrat) {
@@ -85,9 +122,9 @@ export class MainStrategy implements Strategy {
                 if (snake.length > this.saveLength) {
                     snake.log(`snake too long, saving`);
                     snakeStrat = new SaveSnakeStrategy(
-                        gameState,
+                        this.gameState,
                         snake,
-                        gameState.startAddress
+                        this.gameState.startAddress
                     );
                 }
             }
@@ -107,7 +144,7 @@ export class MainStrategy implements Strategy {
                 //     "lockedFoodsFlatAddresses",
                 //     lockedFoodsFlatAddresses
                 // );
-                const closestFoods = gameState.foodManager.getClosest(
+                const closestFoods = this.gameState.foodManager.getClosest(
                     snake.head
                 );
                 // console.log("closestFoods", closestFoods);
@@ -120,7 +157,7 @@ export class MainStrategy implements Strategy {
                 if (newFood) {
                     snake.log(`new food target`, newFood);
                     snakeStrat = new FoodSnakeStrategy(
-                        gameState,
+                        this.gameState,
                         snake,
                         newFood
                     );
@@ -138,12 +175,5 @@ export class MainStrategy implements Strategy {
             }
         }
         return actions;
-    }
-
-    update(gameState: GameState): Action[] {
-        return [
-            ...this.executeSplitStrategies(gameState),
-            ...this.executeSnakeStrategies(gameState),
-        ];
     }
 }
