@@ -1,7 +1,7 @@
 import { GameState } from "../GameState";
 import { Snake } from "../Snake";
 import { Action, ActionType } from "../action";
-import { nextSteps, sameAddress, toFlat } from "../address";
+import { allSteps, nextSteps, sameAddress, toFlat } from "../address";
 import { Address } from "../common";
 import { pickRandom } from "../util";
 import { SnakeStrategy } from "./SnakeStrategy";
@@ -22,9 +22,13 @@ export class TargetSnakeStrategy implements SnakeStrategy {
     }
 
     update(): Action[] {
-        const possibleNextSteps = nextSteps(this.snake.head, this.target);
-        const availableSteps =
+        let possibleNextSteps = nextSteps(this.snake.head, this.target);
+        let availableSteps =
             this.gameState.grid.filterAvailable(possibleNextSteps);
+        if (availableSteps.length === 0) {
+            possibleNextSteps = allSteps(this.snake.head, this.target);
+            this.gameState.grid.filterAvailable(possibleNextSteps);
+        }
         const step = pickRandom(availableSteps);
         if (step) {
             return [

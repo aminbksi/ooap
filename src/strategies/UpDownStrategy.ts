@@ -1,10 +1,13 @@
 import { GameState } from "../GameState";
-import { Snake } from "../Snake";
-import { Action, ActionType, MoveAction, SplitAction } from "../action";
+import { Action, ActionType, MoveAction } from "../action";
 import { sameAddress } from "../address";
 import { Strategy } from "../strategy";
 
 export class UpDownStrategy implements Strategy {
+    inspect(): string {
+        return `[UpDownStrategy]`;
+    }
+
     update(gameState: GameState): Action[] {
         return this.getMoves(gameState);
     }

@@ -5,6 +5,7 @@ import { Action, ActionType } from "./action";
 import { Address, UUID } from "./common";
 import { GameStateMessage, GameUpdateMessage } from "./generated/player_pb";
 import { Grid } from "./grid";
+import { isDefined } from "./util";
 
 export class GameState {
     grid: Grid;
@@ -14,6 +15,8 @@ export class GameState {
     startAddress: Address;
     foodManager = new FoodManager();
     running: boolean;
+    enemyCellCounts: Map<string, number> = new Map();
+    enemyHeads: Map<string, Address[]> = new Map();
 
     constructor(
         dims: number[],
@@ -55,6 +58,7 @@ export class GameState {
     }
 
     update(gameUpdate: GameUpdateMessage.AsObject): void {
+        this.enemyHeads = new Map();
         for (const updatedCell of gameUpdate.updatedcellsList) {
             const cell = new Cell(
                 updatedCell.addressList,
@@ -67,14 +71,43 @@ export class GameState {
             } else {
                 this.foodManager.removeFood(updatedCell.addressList);
             }
+            if (cell.player) {
+                let heads = this.enemyHeads.get(cell.player);
+                if (!heads) {
+                    heads = [];
+                    this.enemyHeads.set(cell.player, heads);
+                }
+                heads.push(cell.address);
+            }
         }
         if (gameUpdate.removedsnakesList.length > 0) {
             const removedSnakes = new Set(gameUpdate.removedsnakesList);
+            const snakesBefore = this.snakes.length;
             this.snakes = this.snakes.filter(
                 (snake) =>
                     !removedSnakes.has(`${this.playerName}:${snake.name}`)
             );
+            const snakesAfter = this.snakes.length;
+            console.log(
+                `snake removal, before=${snakesBefore} after=${snakesAfter}`
+            );
         }
+        const playerNames = [...this.grid.cells.values()]
+            .map((cell) => cell.player)
+            .filter(isDefined)
+            .filter((name) => name !== this.playerName);
+        this.enemyCellCounts = new Map();
+        for (const name of playerNames) {
+            const count = this.enemyCellCounts.get(name) ?? 0;
+            this.enemyCellCounts.set(name, count + 1);
+        }
+        // Workaround: remove all players that have no recent moves
+        this.enemyCellCounts = new Map(
+            [...this.enemyCellCounts.entries()].filter(([name]) =>
+                this.enemyHeads.has(name)
+            )
+        );
+        // console.log(this.enemyCellCounts);
     }
 
     validateSnakes(): string[] {

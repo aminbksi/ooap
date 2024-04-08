@@ -4,6 +4,7 @@ import { Action, ActionType, SplitAction } from "../action";
 import { toFlat } from "../address";
 import { Address, SnakeName } from "../common";
 import { FoodSnakeStrategy } from "../snakeStrategies/FoodSnakeStrategy";
+import { KillSnakeStrategy } from "../snakeStrategies/KillSnakeStrategy";
 import { SaveSnakeStrategy } from "../snakeStrategies/SaveSnakeStrategy";
 import { SnakeStrategy } from "../snakeStrategies/SnakeStrategy";
 import { Strategy } from "../strategy";
@@ -11,15 +12,19 @@ import { isDefined } from "../util";
 
 export class MainStrategy implements Strategy {
     snakeStrategies: Map<SnakeName, SnakeStrategy> = new Map();
+    splitCount: number = 0;
 
     constructor(
         public gameState: GameState,
-        public saveLength: number = 10,
-        public desiredMainSnakes: number = 10
+        public saveLength: number = 30,
+        public kamikazeLength: number = 2, //saveLength - 3,
+        public desiredMainSnakes: number = 10,
+        public desiredKamikazeSnakes: number = 2
     ) {}
 
     update(): Action[] {
         return [
+            ...this.executeKamikazeStrategies(),
             ...this.executeSplitStrategies(),
             ...this.executeSnakeStrategies(),
         ];
@@ -64,14 +69,15 @@ export class MainStrategy implements Strategy {
     splitSnake(
         snake: Snake,
         gameState: GameState,
-        amount: number
+        amount: number,
+        kamikaze: boolean
     ): Action | undefined {
         const kidSnake = snake.getKid(1);
         const next = this.getNextAddress(gameState, kidSnake.head);
         if (next) {
             const splitAction: SplitAction = {
                 type: ActionType.Split,
-                newSnakeName: kidSnake.name,
+                newSnakeName: kidSnake.name + (kamikaze ? "_k" : ""),
                 oldSnakeName: snake.name,
                 snakeSegment: kidSnake.length,
                 nextLocation: next,
@@ -82,18 +88,50 @@ export class MainStrategy implements Strategy {
 
     executeSplitStrategies(): Action[] {
         const actions: Action[] = [];
-        let splitCount = 0;
+        this.splitCount = 0;
         for (const snake of this.gameState.snakes) {
             if (
-                this.gameState.snakes.length + splitCount <
+                this.gameState.snakes.length + this.splitCount <
                 this.desiredMainSnakes
             ) {
                 if (snake.length > 1) {
                     // Split when we have splittable snakes until we have enough snakes.
                     snake.log(`splitting`);
-                    const kid = this.splitSnake(snake, this.gameState, 1);
+                    const kid = this.splitSnake(
+                        snake,
+                        this.gameState,
+                        1,
+                        false
+                    );
                     if (kid) {
-                        splitCount++;
+                        this.splitCount++;
+                        actions.push(kid);
+                    }
+                }
+            }
+        }
+
+        return actions;
+    }
+
+    executeKamikazeStrategies(): Action[] {
+        const actions: Action[] = [];
+        const kamikazeCount = this.gameState.snakes.filter((snake) =>
+            snake.name.endsWith("_k")
+        ).length;
+        for (const snake of this.gameState.snakes) {
+            if (
+                // this.gameState.snakes.length + this.splitCount >
+                //     this.desiredMainSnakes &&
+                kamikazeCount + this.splitCount <
+                this.desiredKamikazeSnakes
+            ) {
+                if (snake.length > 2 && snake.length >= this.kamikazeLength) {
+                    // Split when we have splittable snakes until we have enough snakes.
+                    snake.log(`splitting kamikaze`);
+                    const kid = this.splitSnake(snake, this.gameState, 1, true);
+                    if (kid) {
+                        this.splitCount++;
                         actions.push(kid);
                     }
                 }
@@ -127,6 +165,11 @@ export class MainStrategy implements Strategy {
                         this.gameState.startAddress
                     );
                 }
+            }
+            if (!snakeStrat && snake.name.endsWith("_k")) {
+                // Determine if we have a kamikaze snake and set its stragetgy accordingly
+                snake.log(`assigned kamikaze strategy`);
+                snakeStrat = new KillSnakeStrategy(this.gameState, snake);
             }
             if (!snakeStrat) {
                 // Determine which foods are being targeted by our snakes right now

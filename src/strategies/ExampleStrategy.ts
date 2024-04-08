@@ -4,6 +4,10 @@ import { Address } from "../common";
 import { Strategy } from "../strategy";
 
 export class ExampleStrategy implements Strategy {
+    inspect(): string {
+        return "[ExampleStrategy]";
+    }
+
     update(gameState: GameState): Action[] {
         return [...this.getMoves(gameState), ...this.getSplits(gameState)];
     }

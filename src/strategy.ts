@@ -4,6 +4,8 @@ import { isDefined } from "./util";
 
 export interface Strategy {
     update(gameState: GameState): Action[];
+
+    inspect(): string;
 }
 
 export interface ActionChecker {

@@ -25,6 +25,21 @@ export function nextSteps(from: Address, to: Address): Address[] {
     return steps;
 }
 
+export function allSteps(from: Address, to: Address): Address[] {
+    const steps: Address[] = [];
+    for (let i = 0; i < to.length; i++) {
+        if (true) {
+            const step = [...from];
+            step[i]++;
+            steps.push(step);
+        } else if (true) {
+            const step = [...from];
+            step[i]--;
+            steps.push(step);
+        }
+    }
+    return steps;
+}
 export function toFlat(addr: Address): FlatAddress {
     return addr.join(",");
 }

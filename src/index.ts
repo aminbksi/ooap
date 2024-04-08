@@ -16,7 +16,7 @@ import {
 } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
 import { ActionRejecter } from "./strategy";
-import { isDefined, random } from "./util";
+import { isDefined } from "./util";
 
 export const client = new PlayerHostClient(
     "192.168.178.62:5168",
@@ -34,8 +34,11 @@ console.log("Subscribed");
 
 const myClient = new MyClient(client);
 
-const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
+//const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
+const PLAYER_NAME = `ForTheWin`;
+
 async function main() {
+    await writeFile("./state.txt", "BOOT");
     const gameSettings = await myClient.register({ playername: PLAYER_NAME });
     console.log("gameSettings", gameSettings);
     const gameState = new GameState(
@@ -73,13 +76,13 @@ async function main() {
             console.log("removedSnakes", update.removedsnakesList);
         }
         gameState.update(update);
-        const snakeAdminValidationErrors = gameState.validateSnakes();
-        if (snakeAdminValidationErrors.length > 0) {
-            console.warn(
-                "Snake administration incorrect: ",
-                snakeAdminValidationErrors.join("\n")
-            );
-        }
+        // const snakeAdminValidationErrors = gameState.validateSnakes();
+        // if (snakeAdminValidationErrors.length > 0) {
+        //     console.warn(
+        //         "Snake administration incorrect: ",
+        //         snakeAdminValidationErrors.join("\n")
+        //     );
+        // }
 
         if (gameState.snakes.length === 0) {
             console.error("NO SNAKES LEFT");
@@ -114,9 +117,9 @@ async function main() {
             switch (action.type) {
                 case ActionType.Move:
                     {
-                        // gameState
-                        //     .getSnake(action.snakeName)
-                        //     ?.log(`move`, action.nextLocation);
+                        gameState
+                            .getSnake(action.snakeName)
+                            ?.log(`move`, action.nextLocation);
                         await myClient.moveSnake(action);
                     }
                     break;
@@ -150,11 +153,14 @@ async function main() {
             `tick=${tickCount++}`,
             `food=${gameState.foodManager.foods.size}`,
             `running=${gameState.running}`,
-            `stuckSnakes=${missingSnakesMoves}`,
+            `stuckSnakes=${[...missingSnakesMoves]
+                .map((snake) => snake.name)
+                .join(", ")}`,
+            "",
         ];
         await writeFile(
             "./state.txt",
-            [overallText, strategyText, ""].join("\n")
+            [...overallText, strategyText, ""].join("\n")
         );
     });
 }
