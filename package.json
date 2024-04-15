@@ -1,14 +1,15 @@
 {
-    "name": "tsclient",
+    "name": "swoc2024-ts",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "description": "Sioux Weekend of Code 2024 - Snake multiplayer bot",
+    "main": "dist/index.js",
     "scripts": {
+        "build": "tsc && npm run -s test",
         "start": "nodemon -w dist dist/index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "jest"
     },
-    "author": "",
-    "license": "ISC",
+    "author": "Martin Poelstra <martin@beryllium.net>",
+    "license": "MIT",
     "devDependencies": {
         "@jest/globals": "^29.7.0",
         "@types/node": "^20.12.4",
