@@ -21,6 +21,7 @@
     },
     "dependencies": {
         "@grpc/grpc-js": "^1.10.6",
+        "dotenv": "^16.4.5",
         "grpc-tools": "^1.12.4",
         "source-map-support": "^0.5.21"
     }

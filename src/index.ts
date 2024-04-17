@@ -1,3 +1,4 @@
+import "dotenv/config";
 import "source-map-support/register";
 
 import * as grpc from "@grpc/grpc-js";
@@ -19,7 +20,7 @@ import { ActionRejecter } from "./strategy";
 import { isDefined } from "./util";
 
 export const client = new PlayerHostClient(
-    "192.168.178.62:5168",
+    process.env.SNAKE_HOST ?? "localhost:5168",
     grpc.credentials.createInsecure()
 );
 
@@ -35,7 +36,7 @@ console.log("Subscribed");
 const myClient = new MyClient(client);
 
 //const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
-const PLAYER_NAME = `ForTheWin`;
+const PLAYER_NAME = process.env.SNAKE_PLAYER ?? "ForTheWin";
 
 async function main() {
     await writeFile("./state.txt", "BOOT");

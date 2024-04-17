@@ -21,7 +21,9 @@ It's pretty rough on the edges and does still contain a few bugs :)
 
 ## Usage
 
-For now, edit the hostname to connect to inside `src/index.ts`, then:
+Copy `example.env` to `.env` and edit the hostname and player name inside of it.
+
+Then run:
 
 ```sh
 npm install
