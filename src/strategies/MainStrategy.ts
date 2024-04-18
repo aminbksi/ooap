@@ -143,6 +143,14 @@ export class MainStrategy implements Strategy {
 
     executeSnakeStrategies(): Action[] {
         const actions: Action[] = [];
+        // Remove snakestrategies for snakes that no longer exist
+        for (const [snakeName, _snakeStrat] of [
+            ...this.snakeStrategies.entries(),
+        ]) {
+            if (!this.gameState.getSnake(snakeName)) {
+                this.snakeStrategies.delete(snakeName);
+            }
+        }
         for (const snake of this.gameState.snakes) {
             let snakeStrat = this.snakeStrategies.get(snake.name);
             // Remove target if it's no longer applicable
