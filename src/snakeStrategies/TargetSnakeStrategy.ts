@@ -22,12 +22,13 @@ export class TargetSnakeStrategy implements SnakeStrategy {
     }
 
     update(): Action[] {
-        let possibleNextSteps = nextSteps(this.snake.head, this.target);
+        const possibleNextSteps = nextSteps(this.snake.head, this.target);
         let availableSteps =
             this.gameState.grid.filterAvailable(possibleNextSteps);
         if (availableSteps.length === 0) {
-            possibleNextSteps = allSteps(this.snake.head, this.target);
-            this.gameState.grid.filterAvailable(possibleNextSteps);
+            const allPossibleSteps = allSteps(this.snake.head, this.target);
+            availableSteps =
+                this.gameState.grid.filterAvailable(allPossibleSteps);
         }
         const step = pickRandom(availableSteps);
         if (step) {
