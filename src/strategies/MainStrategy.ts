@@ -92,7 +92,10 @@ export class MainStrategy implements Strategy {
         for (const snake of this.gameState.snakes) {
             if (
                 this.gameState.snakes.length + this.splitCount <
-                this.desiredMainSnakes
+                Math.min(
+                    this.desiredMainSnakes,
+                    this.gameState.foodManager.foods.size
+                )
             ) {
                 if (snake.length > 1) {
                     // Split when we have splittable snakes until we have enough snakes.
@@ -124,7 +127,10 @@ export class MainStrategy implements Strategy {
                 // this.gameState.snakes.length + this.splitCount >
                 //     this.desiredMainSnakes &&
                 kamikazeCount + this.splitCount <
-                this.desiredKamikazeSnakes
+                Math.min(
+                    this.desiredKamikazeSnakes,
+                    this.gameState.enemyCellCounts.size
+                )
             ) {
                 if (snake.length > 2 && snake.length >= this.kamikazeLength) {
                     // Split when we have splittable snakes until we have enough snakes.
