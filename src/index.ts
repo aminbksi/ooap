@@ -4,11 +4,11 @@ import "source-map-support/register";
 import * as grpc from "@grpc/grpc-js";
 import { writeFile } from "fs/promises";
 import { GameState } from "./GameState";
+import { RpcClient } from "./RpcClient";
 import { ActionType } from "./action";
 import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
 import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
-import { MyClient } from "./client";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
 import {
     EmptyRequest,
@@ -19,21 +19,25 @@ import { MainStrategy } from "./strategies/MainStrategy";
 import { ActionRejecter } from "./strategy";
 import { isDefined } from "./util";
 
-export const client = new PlayerHostClient(
-    process.env.SNAKE_HOST ?? "localhost:5168",
-    grpc.credentials.createInsecure()
-);
+function createRpcClient(): RpcClient {
+    const client = new PlayerHostClient(
+        process.env.SNAKE_HOST ?? "localhost:5168",
+        grpc.credentials.createInsecure()
+    );
 
-console.log("Subscribing...");
+    console.log("Subscribing...");
 
-const serverEvents = client.subscribeToServerEvents(new EmptyRequest());
-serverEvents.on("event", function (thing: ServerUpdateMessage) {
-    console.log("event", thing.toObject());
-});
+    const serverEvents = client.subscribeToServerEvents(new EmptyRequest());
+    serverEvents.on("event", function (thing: ServerUpdateMessage) {
+        console.log("event", thing.toObject());
+    });
 
-console.log("Subscribed");
+    console.log("Subscribed");
 
-const myClient = new MyClient(client);
+    return new RpcClient(client);
+}
+
+const myClient = createRpcClient();
 
 //const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
 const PLAYER_NAME = process.env.SNAKE_PLAYER ?? "ForTheWin";

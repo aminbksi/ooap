@@ -1,6 +1,5 @@
 import * as grpc from "@grpc/grpc-js";
 import { promisify } from "util";
-import { client } from ".";
 import { Move, Split } from "./action";
 import { UUID } from "./common";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
@@ -15,7 +14,7 @@ import {
     SubsribeRequest,
 } from "./generated/player_pb";
 
-export class MyClient {
+export class RpcClient {
     playerIdentifier: UUID | undefined;
 
     constructor(public client: PlayerHostClient) {}
@@ -31,7 +30,7 @@ export class MyClient {
         req.setPlayername(request.playername);
         const settings = (
             await promisify<RegisterRequest, GameSettings>(
-                client.register.bind(client)
+                this.client.register.bind(this.client)
             )(req)
         ).toObject();
         this.setPlayerIdentifier(settings.playeridentifier);
@@ -42,7 +41,7 @@ export class MyClient {
         const req = new EmptyRequest();
         const gameState = (
             await promisify<EmptyRequest, GameStateMessage>(
-                client.getGameState.bind(client)
+                this.client.getGameState.bind(this.client)
             )(req)
         ).toObject();
         return gameState;
@@ -54,7 +53,7 @@ export class MyClient {
             throw new Error("missing playerIdentifier");
         }
         req.setPlayeridentifier(this.playerIdentifier);
-        return client.subscribe(req);
+        return this.client.subscribe(req);
     }
 
     public async splitSnake(request: Split): Promise<void> {
@@ -68,7 +67,7 @@ export class MyClient {
         req.setSnakesegment(request.snakeSegment);
         req.setNextlocationList(request.nextLocation);
         await promisify<SplitRequest, EmptyRequest>(
-            client.splitSnake.bind(client)
+            this.client.splitSnake.bind(this.client)
         )(req);
     }
 
@@ -81,7 +80,7 @@ export class MyClient {
         req.setSnakename(request.snakeName);
         req.setNextlocationList(request.nextLocation);
         await promisify<MoveRequest, EmptyRequest>(
-            client.makeMove.bind(client)
+            this.client.makeMove.bind(this.client)
         )(req);
     }
 }
