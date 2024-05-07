@@ -5,6 +5,7 @@ import { toFlat } from "../address";
 import { Address, SnakeName } from "../common";
 import { FoodSnakeStrategy } from "../snakeStrategies/FoodSnakeStrategy";
 import { KillSnakeStrategy } from "../snakeStrategies/KillSnakeStrategy";
+import { RandomWalkSnakeStrategy } from "../snakeStrategies/RandomWalkSnakeStrategy";
 import { SaveSnakeStrategy } from "../snakeStrategies/SaveSnakeStrategy";
 import { SnakeStrategy } from "../snakeStrategies/SnakeStrategy";
 import { Strategy } from "../strategy";
@@ -219,6 +220,11 @@ export class MainStrategy implements Strategy {
                         newFood
                     );
                 }
+            }
+            if (!snakeStrat) {
+                // Let snake move 'out of the way' to prevent
+                // accidentally blocking other snakes
+                snakeStrat = new RandomWalkSnakeStrategy(this.gameState, snake);
             }
             // Update new strategy, even if it's now undefined
             if (snakeStrat) {
