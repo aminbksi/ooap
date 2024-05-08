@@ -1,4 +1,6 @@
-import { Address } from "./common";
+import { ReadableStream } from "stream/web";
+import { Move, Split } from "./action";
+import { Address, UUID } from "./common";
 
 export interface GameSettings {
     dimensions: Address;
@@ -27,4 +29,14 @@ export interface PlayerScore {
     playerName: string;
     score: number;
     snakes: number;
+}
+
+export interface Client {
+    setPlayerIdentifier(id: UUID): void;
+    register(playerName: string): Promise<GameSettings>;
+    getGameState(): Promise<GameStateMessage>;
+
+    subscribe(): ReadableStream<GameUpdateMessage>;
+    splitSnake(request: Split): Promise<void>;
+    moveSnake(request: Move): Promise<void>;
 }

@@ -9,6 +9,7 @@ import { ActionType } from "./action";
 import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
 import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
+import { Client } from "./client";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
 import { EmptyRequest, ServerUpdateMessage } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
@@ -29,11 +30,21 @@ function createRpcClient(): RpcClient {
     });
 
     console.log("Subscribed");
-
     return new RpcClient(client);
 }
 
-const myClient = createRpcClient();
+let myClient: Client;
+switch (process.env.SNAKE_PROTOCOL) {
+    case "grpc": {
+        myClient = createRpcClient();
+        break;
+    }
+    default:
+        console.error(
+            "Missing or invalid 'SNAKE_PROTOCOL'. Expected 'grpc' or 'ws'."
+        );
+        process.exit(1);
+}
 
 //const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
 const PLAYER_NAME = process.env.SNAKE_PLAYER ?? "ForTheWin";

@@ -1,7 +1,12 @@
 import { ReadableStream } from "stream/web";
 import { promisify } from "util";
 import { Move, Split } from "./action";
-import { GameSettings, GameStateMessage, GameUpdateMessage } from "./client";
+import {
+    Client,
+    GameSettings,
+    GameStateMessage,
+    GameUpdateMessage,
+} from "./client";
 import { UUID } from "./common";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
 import {
@@ -15,7 +20,7 @@ import {
     SubsribeRequest,
 } from "./generated/player_pb";
 
-export class RpcClient {
+export class RpcClient implements Client {
     playerIdentifier: UUID | undefined;
 
     constructor(public client: PlayerHostClient) {}
