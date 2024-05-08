@@ -1,15 +1,16 @@
-import * as grpc from "@grpc/grpc-js";
+import { ReadableStream } from "stream/web";
 import { promisify } from "util";
 import { Move, Split } from "./action";
+import { GameSettings, GameStateMessage, GameUpdateMessage } from "./client";
 import { UUID } from "./common";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
 import {
     EmptyRequest,
-    GameSettings,
-    GameStateMessage,
-    GameUpdateMessage,
     Move as MoveRequest,
     RegisterRequest,
+    GameSettings as RpcGameSettings,
+    GameStateMessage as RpcGameStateMessage,
+    GameUpdateMessage as RpcGameUpdateMessage,
     SplitRequest,
     SubsribeRequest,
 } from "./generated/player_pb";
@@ -23,37 +24,66 @@ export class RpcClient {
         this.playerIdentifier = id;
     }
 
-    public async register(
-        request: RegisterRequest.AsObject
-    ): Promise<GameSettings.AsObject> {
+    public async register(playerName: string): Promise<GameSettings> {
         const req = new RegisterRequest();
-        req.setPlayername(request.playername);
+        req.setPlayername(playerName);
         const settings = (
-            await promisify<RegisterRequest, GameSettings>(
+            await promisify<RegisterRequest, RpcGameSettings>(
                 this.client.register.bind(this.client)
             )(req)
         ).toObject();
         this.setPlayerIdentifier(settings.playeridentifier);
-        return settings;
+        return {
+            dimensions: settings.dimensionsList,
+            startAddress: settings.startaddressList,
+            playerIdentifier: settings.playeridentifier,
+            gameStarted: settings.gamestarted,
+        };
     }
 
-    public async getGameState(): Promise<GameStateMessage.AsObject> {
+    public async getGameState(): Promise<GameStateMessage> {
         const req = new EmptyRequest();
         const gameState = (
-            await promisify<EmptyRequest, GameStateMessage>(
+            await promisify<EmptyRequest, RpcGameStateMessage>(
                 this.client.getGameState.bind(this.client)
             )(req)
         ).toObject();
-        return gameState;
+        return {
+            updatedCells: gameState.updatedcellsList.map((cell) => ({
+                address: cell.addressList,
+                player: cell.player,
+                foodValue: cell.foodvalue,
+            })),
+        };
     }
 
-    public subscribe(): grpc.ClientReadableStream<GameUpdateMessage> {
+    public subscribe(): ReadableStream<GameUpdateMessage> {
         const req = new SubsribeRequest();
         if (!this.playerIdentifier) {
             throw new Error("missing playerIdentifier");
         }
         req.setPlayeridentifier(this.playerIdentifier);
-        return this.client.subscribe(req);
+        const grpcStream = this.client.subscribe(req);
+        return new ReadableStream({
+            start(controller) {
+                grpcStream.on("data", (rawUpdate: RpcGameUpdateMessage) => {
+                    const update = rawUpdate.toObject();
+                    controller.enqueue({
+                        updatedCells: update.updatedcellsList.map((cell) => ({
+                            address: cell.addressList,
+                            player: cell.player,
+                            foodValue: cell.foodvalue,
+                        })),
+                        playerScores: update.playerscoresList.map((score) => ({
+                            playerName: score.playername,
+                            score: score.score,
+                            snakes: score.snakes,
+                        })),
+                        removedSnakes: update.removedsnakesList,
+                    });
+                });
+            },
+        });
     }
 
     public async splitSnake(request: Split): Promise<void> {

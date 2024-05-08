@@ -10,11 +10,7 @@ import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollision
 import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
-import {
-    EmptyRequest,
-    GameUpdateMessage,
-    ServerUpdateMessage,
-} from "./generated/player_pb";
+import { EmptyRequest, ServerUpdateMessage } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
 import { ActionRejecter } from "./strategy";
 import { isDefined } from "./util";
@@ -44,18 +40,17 @@ const PLAYER_NAME = process.env.SNAKE_PLAYER ?? "ForTheWin";
 
 async function main() {
     await writeFile("./state.txt", "BOOT");
-    const gameSettings = await myClient.register({ playername: PLAYER_NAME });
+    const gameSettings = await myClient.register(PLAYER_NAME);
     console.log("gameSettings", gameSettings);
     const gameState = new GameState(
-        gameSettings.dimensionsList,
-        gameSettings.startaddressList,
+        gameSettings.dimensions,
+        gameSettings.startAddress,
         PLAYER_NAME,
-        gameSettings.playeridentifier,
-        gameSettings.gamestarted
+        gameSettings.playerIdentifier,
+        gameSettings.gameStarted
     );
     const initialGameState = await myClient.getGameState();
     gameState.setState(initialGameState);
-    const gameUpdates = myClient.subscribe();
     const strategy = new MainStrategy(gameState);
     const actionRejecters = [
         new ActionRejecter([
@@ -67,18 +62,19 @@ async function main() {
     if (!gameState.running) {
         console.log("WAITING FOR START");
     }
+
+    const gameUpdates = myClient.subscribe();
     let lastFoodLogged: number = 0;
     let tickCount = 0;
-    gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
+    for await (const update of gameUpdates) {
         // console.debug("loop");
         if (!gameState.running) {
             console.log("STARTED");
             gameState.run();
         }
-        const update = rawUpdate.toObject();
         // console.log("update", update.updatedcellsList);
-        if (update.removedsnakesList.length > 0) {
-            console.log("removedSnakes", update.removedsnakesList);
+        if (update.removedSnakes.length > 0) {
+            console.log("removedSnakes", update.removedSnakes);
         }
         gameState.update(update);
         // const snakeAdminValidationErrors = gameState.validateSnakes();
@@ -167,7 +163,7 @@ async function main() {
             "./state.txt",
             [...overallText, strategyText, ""].join("\n")
         );
-    });
+    }
 }
 
 main().catch((err) => {

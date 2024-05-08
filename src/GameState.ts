@@ -2,8 +2,8 @@ import { Cell } from "./Cell";
 import { FoodManager } from "./FoodManager";
 import { Snake } from "./Snake";
 import { Action, ActionType } from "./action";
+import { GameStateMessage, GameUpdateMessage } from "./client";
 import { Address, UUID } from "./common";
-import { GameStateMessage, GameUpdateMessage } from "./generated/player_pb";
 import { Grid } from "./grid";
 import { isDefined } from "./util";
 
@@ -41,35 +41,35 @@ export class GameState {
         return this.grid.getCell(address);
     }
 
-    setState(gameState: GameStateMessage.AsObject): void {
-        for (const updatedCell of gameState.updatedcellsList) {
+    setState(gameState: GameStateMessage): void {
+        for (const updatedCell of gameState.updatedCells) {
             const cell = new Cell(
-                updatedCell.addressList,
-                updatedCell.foodvalue > 0,
+                updatedCell.address,
+                updatedCell.foodValue > 0,
                 updatedCell.player === "" ? undefined : updatedCell.player
             );
-            this.grid.setCell(updatedCell.addressList, cell);
-            if (updatedCell.foodvalue > 0) {
-                this.foodManager.addFood(updatedCell.addressList);
+            this.grid.setCell(updatedCell.address, cell);
+            if (updatedCell.foodValue > 0) {
+                this.foodManager.addFood(updatedCell.address);
             } else {
-                this.foodManager.removeFood(updatedCell.addressList);
+                this.foodManager.removeFood(updatedCell.address);
             }
         }
     }
 
-    update(gameUpdate: GameUpdateMessage.AsObject): void {
+    update(gameUpdate: GameUpdateMessage): void {
         this.enemyHeads = new Map();
-        for (const updatedCell of gameUpdate.updatedcellsList) {
+        for (const updatedCell of gameUpdate.updatedCells) {
             const cell = new Cell(
-                updatedCell.addressList,
-                updatedCell.foodvalue > 0,
+                updatedCell.address,
+                updatedCell.foodValue > 0,
                 updatedCell.player === "" ? undefined : updatedCell.player
             );
-            this.grid.setCell(updatedCell.addressList, cell);
-            if (updatedCell.foodvalue > 0) {
-                this.foodManager.addFood(updatedCell.addressList);
+            this.grid.setCell(updatedCell.address, cell);
+            if (updatedCell.foodValue > 0) {
+                this.foodManager.addFood(updatedCell.address);
             } else {
-                this.foodManager.removeFood(updatedCell.addressList);
+                this.foodManager.removeFood(updatedCell.address);
             }
             if (cell.player) {
                 let heads = this.enemyHeads.get(cell.player);
@@ -80,8 +80,8 @@ export class GameState {
                 heads.push(cell.address);
             }
         }
-        if (gameUpdate.removedsnakesList.length > 0) {
-            const removedSnakes = new Set(gameUpdate.removedsnakesList);
+        if (gameUpdate.removedSnakes.length > 0) {
+            const removedSnakes = new Set(gameUpdate.removedSnakes);
             const snakesBefore = this.snakes.length;
             this.snakes = this.snakes.filter(
                 (snake) =>
