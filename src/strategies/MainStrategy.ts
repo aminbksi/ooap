@@ -203,7 +203,8 @@ export class MainStrategy implements Strategy {
                 //     lockedFoodsFlatAddresses
                 // );
                 const closestFoods = this.gameState.foodManager.getClosest(
-                    snake.head
+                    snake.head,
+                    this.gameState.startAddress // Prevent trying to get to food at our home address
                 );
                 // console.log("closestFoods", closestFoods);
                 const availableFoods = closestFoods.filter(
