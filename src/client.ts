@@ -1,6 +1,6 @@
 import { ReadableStream } from "stream/web";
 import { Move, Split } from "./action";
-import { Address, UUID } from "./common";
+import { Address } from "./common";
 
 export interface GameSettings {
     dimensions: Address;
@@ -15,8 +15,8 @@ export interface GameStateMessage {
 
 export interface UpdatedCell {
     address: Address;
-    player: string;
-    foodValue: number;
+    player?: string;
+    hasFood: boolean;
 }
 
 export interface GameUpdateMessage {
@@ -32,7 +32,6 @@ export interface PlayerScore {
 }
 
 export interface Client {
-    setPlayerIdentifier(id: UUID): void;
     register(playerName: string): Promise<GameSettings>;
     getGameState(): Promise<GameStateMessage>;
 

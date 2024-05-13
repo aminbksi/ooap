@@ -3,14 +3,13 @@ import { FoodManager } from "./FoodManager";
 import { Snake } from "./Snake";
 import { Action, ActionType } from "./action";
 import { GameStateMessage, GameUpdateMessage } from "./client";
-import { Address, UUID } from "./common";
+import { Address } from "./common";
 import { Grid } from "./grid";
 import { isDefined } from "./util";
 
 export class GameState {
     grid: Grid;
     snakes: Snake[] = [];
-    playerIdentifier: string;
     playerName: string;
     startAddress: Address;
     foodManager = new FoodManager();
@@ -22,13 +21,11 @@ export class GameState {
         dims: number[],
         startAddress: Address,
         playerName: string,
-        playerIdentifier: UUID,
         running: boolean
     ) {
         this.startAddress = startAddress;
         this.grid = new Grid(dims);
         this.snakes.push(new Snake(playerName, [startAddress]));
-        this.playerIdentifier = playerIdentifier;
         this.playerName = playerName;
         this.running = running;
     }
@@ -45,11 +42,11 @@ export class GameState {
         for (const updatedCell of gameState.updatedCells) {
             const cell = new Cell(
                 updatedCell.address,
-                updatedCell.foodValue > 0,
-                updatedCell.player === "" ? undefined : updatedCell.player
+                updatedCell.hasFood,
+                updatedCell.player
             );
             this.grid.setCell(updatedCell.address, cell);
-            if (updatedCell.foodValue > 0) {
+            if (updatedCell.hasFood) {
                 this.foodManager.addFood(updatedCell.address);
             } else {
                 this.foodManager.removeFood(updatedCell.address);
@@ -62,11 +59,11 @@ export class GameState {
         for (const updatedCell of gameUpdate.updatedCells) {
             const cell = new Cell(
                 updatedCell.address,
-                updatedCell.foodValue > 0,
-                updatedCell.player === "" ? undefined : updatedCell.player
+                updatedCell.hasFood,
+                updatedCell.player
             );
             this.grid.setCell(updatedCell.address, cell);
-            if (updatedCell.foodValue > 0) {
+            if (updatedCell.hasFood) {
                 this.foodManager.addFood(updatedCell.address);
             } else {
                 this.foodManager.removeFood(updatedCell.address);

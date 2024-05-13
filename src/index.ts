@@ -57,7 +57,6 @@ async function main() {
         gameSettings.dimensions,
         gameSettings.startAddress,
         PLAYER_NAME,
-        gameSettings.playerIdentifier,
         gameSettings.gameStarted
     );
     const initialGameState = await myClient.getGameState();

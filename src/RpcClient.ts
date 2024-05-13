@@ -21,11 +21,11 @@ import {
 } from "./generated/player_pb";
 
 export class RpcClient implements Client {
-    playerIdentifier: UUID | undefined;
+    private playerIdentifier: UUID | undefined;
 
     constructor(public client: PlayerHostClient) {}
 
-    public setPlayerIdentifier(id: UUID): void {
+    private setPlayerIdentifier(id: UUID): void {
         this.playerIdentifier = id;
     }
 
@@ -56,8 +56,8 @@ export class RpcClient implements Client {
         return {
             updatedCells: gameState.updatedcellsList.map((cell) => ({
                 address: cell.addressList,
-                player: cell.player,
-                foodValue: cell.foodvalue,
+                player: cell.player === "" ? undefined : cell.player,
+                hasFood: cell.foodvalue > 0,
             })),
         };
     }
@@ -76,8 +76,9 @@ export class RpcClient implements Client {
                     controller.enqueue({
                         updatedCells: update.updatedcellsList.map((cell) => ({
                             address: cell.addressList,
-                            player: cell.player,
-                            foodValue: cell.foodvalue,
+                            player:
+                                cell.player === "" ? undefined : cell.player,
+                            hasFood: cell.foodvalue > 0,
                         })),
                         playerScores: update.playerscoresList.map((score) => ({
                             playerName: score.playername,
