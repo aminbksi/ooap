@@ -46,7 +46,7 @@ export class GameState {
             const cell = new Cell(
                 updatedCell.addressList,
                 updatedCell.foodvalue > 0,
-                updatedCell.player === "" ? undefined : updatedCell.player
+                updatedCell.player
             );
             this.grid.setCell(updatedCell.addressList, cell);
             if (updatedCell.foodvalue > 0) {
@@ -63,7 +63,7 @@ export class GameState {
             const cell = new Cell(
                 updatedCell.addressList,
                 updatedCell.foodvalue > 0,
-                updatedCell.player === "" ? undefined : updatedCell.player
+                updatedCell.player
             );
             this.grid.setCell(updatedCell.addressList, cell);
             if (updatedCell.foodvalue > 0) {

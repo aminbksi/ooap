@@ -129,7 +129,7 @@ async function main() {
                         gameState
                             .getSnake(action.oldSnakeName)
                             ?.log(
-                                `split to ${action.newSnakeName} length ${action.snakeSegment}`
+                                `split to ${action.newSnakeName}:${action.snakeSegment}`, action.nextLocation
                             );
                         await myClient.splitSnake(action);
                     }
