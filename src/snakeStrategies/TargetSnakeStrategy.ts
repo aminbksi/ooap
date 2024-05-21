@@ -26,11 +26,13 @@ export class TargetSnakeStrategy implements SnakeStrategy {
         let availableSteps =
             this.gameState.grid.filterAvailable(possibleNextSteps);
         if (availableSteps.length === 0) {
+            this.snake.log(`No steps available towards target, taking detour`)
             possibleNextSteps = allSteps(this.snake.head, this.target);
-            this.gameState.grid.filterAvailable(possibleNextSteps);
+            availableSteps = this.gameState.grid.filterAvailable(possibleNextSteps);
         }
         const step = pickRandom(availableSteps);
         if (step) {
+            this.gameState.grid.getCell(step).markAsOurs()
             return [
                 {
                     type: ActionType.Move,
@@ -38,6 +40,12 @@ export class TargetSnakeStrategy implements SnakeStrategy {
                     nextLocation: step,
                 },
             ];
+        }
+        else {
+            this.snake.log(`No steps available (${availableSteps.length}) from`, possibleNextSteps)
+            possibleNextSteps.forEach(cell => {
+                this.snake.log(`Cell:`, cell, `, Player: "${this.gameState.grid.getCell(cell).player}"`)
+            });
         }
         return [];
     }
