@@ -32,7 +32,8 @@ export function allSteps(from: Address, to: Address): Address[] {
             const step = [...from];
             step[i]++;
             steps.push(step);
-        } else if (true) {
+        } 
+        if (true) {
             const step = [...from];
             step[i]--;
             steps.push(step);
