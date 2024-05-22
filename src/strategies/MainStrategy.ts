@@ -17,8 +17,8 @@ export class MainStrategy implements Strategy {
 
     constructor(
         public gameState: GameState,
-        public saveLength: number = 30,
-        public kamikazeLength: number = 2, //saveLength - 3,
+        public saveLength: number = 10,
+        public kamikazeLength: number = saveLength - 3,
         public desiredMainSnakes: number = 10,
         public desiredKamikazeSnakes: number = 2
     ) {}
@@ -92,6 +92,14 @@ export class MainStrategy implements Strategy {
         const snakeNames : string[] = this.gameState.snakes.map((snake) => snake.name)
         this.snakeStrategies.forEach((strategy,key,map) => {
             if (!snakeNames.includes(key)) {
+                if (strategy instanceof SaveSnakeStrategy) {
+                    console.log(
+                        `saved snake: ${key}`
+                    );
+                    this.gameState.savedSnake();
+                    this.nr_of_saving_snakes--
+                }
+
                 console.log(`Deleted strategy for snake: ${key}`)
                 this.snakeStrategies.delete(key)
             }
@@ -106,18 +114,21 @@ export class MainStrategy implements Strategy {
                 this.gameState.snakes.length + this.splitCount <
                 this.desiredMainSnakes
             ) {
-                if (snake.length > 1) {
-                    // Split when we have splittable snakes until we have enough snakes.
-                    snake.log(`splitting`);
-                    const kid = this.splitSnake(
-                        snake,
-                        this.gameState,
-                        1,
-                        false
-                    );
-                    if (kid) {
-                        this.splitCount++;
-                        actions.push(kid);
+                // Only split if there is enough food left
+                if (this.gameState.snakes.length + this.splitCount < (this.gameState.foodManager.foods.size / 3)) {
+                    if (snake.length > 1) {
+                        // Split when we have splittable snakes until we have enough snakes.
+                        snake.log(`splitting`);
+                        const kid = this.splitSnake(
+                            snake,
+                            this.gameState,
+                            1,
+                            false
+                        );
+                        if (kid) {
+                            this.splitCount++;
+                            actions.push(kid);
+                        }
                     }
                 }
             }
@@ -133,6 +144,10 @@ export class MainStrategy implements Strategy {
         ).length;
 
         for (const snake of this.gameState.snakes) {
+            // snake.log(
+            //     `Kamikaze? enemies: ${this.gameState.enemyCellCounts.keys.length}, kamikazeCount: ${kamikazeCount}, splitCount: ${this.splitCount}`
+            // );
+
             if (
                 // this.gameState.snakes.length + this.splitCount >
                 //     this.desiredMainSnakes &&
@@ -173,6 +188,10 @@ export class MainStrategy implements Strategy {
                     );
 
                     if (snakeStrat instanceof SaveSnakeStrategy) {
+                        snake.log(
+                            `saved`
+                        );
+                        this.gameState.savedSnake();
                         this.nr_of_saving_snakes--
                     }
 
@@ -231,11 +250,11 @@ export class MainStrategy implements Strategy {
                 }
             }            
             if (!snakeStrat) {
-                if (this.nr_of_saving_snakes > 1) {
-                    snake.log(`No work left, already saving snakes: waiting`);
+                if (this.nr_of_saving_snakes > 3) {
+                    snake.log(`No work left, already saving too many snakes: waiting`);
                 }
                 else {
-                    snake.log(`No work left, saving`);
+                    snake.log(`No work left, saving snake...`);
                     snakeStrat = new SaveSnakeStrategy(
                         this.gameState,
                         snake,

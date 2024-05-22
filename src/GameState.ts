@@ -14,6 +14,7 @@ export class GameState {
     playerName: string;
     startAddress: Address;
     foodManager = new FoodManager();
+    savedSnakes: number;
     running: boolean;
     enemyCellCounts: Map<string, number> = new Map();
     enemyHeads: Map<string, Address[]> = new Map();
@@ -30,6 +31,7 @@ export class GameState {
         this.snakes.push(new Snake(playerName, [startAddress]));
         this.playerIdentifier = playerIdentifier;
         this.playerName = playerName;
+        this.savedSnakes = 0;
         this.running = running;
     }
 
@@ -39,6 +41,10 @@ export class GameState {
 
     getCell(address: Address): Cell {
         return this.grid.getCell(address);
+    }
+
+    savedSnake(): void {
+        this.savedSnakes++;
     }
 
     setState(gameState: GameStateMessage.AsObject): void {
@@ -59,6 +65,7 @@ export class GameState {
 
     update(gameUpdate: GameUpdateMessage.AsObject): void {
         this.enemyHeads = new Map();
+        this.grid.clearOwnMarks();
         for (const updatedCell of gameUpdate.updatedcellsList) {
             const cell = new Cell(
                 updatedCell.addressList,
@@ -95,18 +102,28 @@ export class GameState {
         const playerNames = [...this.grid.cells.values()]
             .map((cell) => cell.player)
             .filter(isDefined)
+            .filter((name) => name !== "")
             .filter((name) => name !== this.playerName);
+
+        console.log(
+            `Gamestate update: playernames count=${playerNames.length}`
+        );
+    
         this.enemyCellCounts = new Map();
         for (const name of playerNames) {
             const count = this.enemyCellCounts.get(name) ?? 0;
             this.enemyCellCounts.set(name, count + 1);
         }
-        // Workaround: remove all players that have no recent moves
-        this.enemyCellCounts = new Map(
-            [...this.enemyCellCounts.entries()].filter(([name]) =>
-                this.enemyHeads.has(name)
-            )
+        console.log(
+            `Gamestate update: enemy count=${this.enemyCellCounts.keys.length}`
         );
+
+        // Workaround: remove all players that have no recent moves
+        // this.enemyCellCounts = new Map(
+        //     [...this.enemyCellCounts.entries()].filter(([name]) =>
+        //         this.enemyHeads.has(name)
+        //     )
+        // );
         // console.log(this.enemyCellCounts);
     }
 

@@ -16,6 +16,12 @@ export class Grid {
         this.cells.set(add, cell);
     }
 
+    public clearOwnMarks(): void {
+        this.cells.forEach(cell => {
+            cell.isOurs = false;
+        });
+    }
+
     checkBounds(address: Address): boolean {
         for (var i = 0; i < address.length; i++) {
             if (address[i] < 0) {

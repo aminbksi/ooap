@@ -154,6 +154,7 @@ async function main() {
             `tick=${tickCount++}`,
             `food=${gameState.foodManager.foods.size}`,
             `running=${gameState.running}`,
+            `savedSnakes=${gameState.savedSnakes}`,
             `stuckSnakes=${[...missingSnakesMoves]
                 .map((snake) => snake.name)
                 .join(", ")}`,
