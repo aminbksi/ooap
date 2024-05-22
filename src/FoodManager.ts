@@ -25,8 +25,12 @@ export class FoodManager {
         return this.foods.has(toFlat(addr));
     }
 
-    getClosest(addr: Address): FoodState[] {
-        const foods = [...this.foods.values()];
+    getClosest(addr: Address, exclude?: Address): FoodState[] {
+        let foods = [...this.foods.values()];
+        if (exclude) {
+            const excludeFlat = toFlat(exclude);
+            foods = foods.filter((f) => toFlat(f.address) !== excludeFlat);
+        }
         foods.sort((fs1, fs2) => {
             return distance(fs1.address, addr) - distance(fs2.address, addr);
         });

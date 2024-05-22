@@ -8,7 +8,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
     public targetPlayerName: string | undefined;
 
     constructor(public gameState: GameState, public snake: Snake) {
-        const target = [-1, -1, -1];
+        const target = [-1];
         super(gameState, snake, target);
     }
 
@@ -22,7 +22,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
         const targetName = this._pickTargetPlayer();
         if (!targetName || targetName === this.gameState.playerName) {
             this.targetPlayerName = undefined;
-            this.target = [-1, -1, -1];
+            this.target = [-1];
             this.snake.log("no target available");
             return;
         }
@@ -36,7 +36,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
                 distance(c2.address, this.snake.head)
             );
         });
-        this.target = playerCells[0]?.address ?? [-1, -1, -1];
+        this.target = playerCells[0]?.address ?? [-1];
         this.snake.log(`selected ${this.targetPlayerName} ${this.target}`);
     }
 
@@ -51,7 +51,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
                 this.targetPlayerName
             ) {
                 this.snake.log("target lost, finding new one");
-                this.target = [-1, -1, -1];
+                this.target = [-1];
             }
         }
         if (this.target[0] === -1) {

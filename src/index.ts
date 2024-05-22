@@ -4,54 +4,63 @@ import "source-map-support/register";
 import * as grpc from "@grpc/grpc-js";
 import { writeFile } from "fs/promises";
 import { GameState } from "./GameState";
+import { RpcClient } from "./RpcClient";
 import { ActionType } from "./action";
 import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
 import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
-import { MyClient } from "./client";
+import { Client } from "./client";
 import { PlayerHostClient } from "./generated/player_grpc_pb";
-import {
-    EmptyRequest,
-    GameUpdateMessage,
-    ServerUpdateMessage,
-} from "./generated/player_pb";
+import { EmptyRequest, ServerUpdateMessage } from "./generated/player_pb";
 import { MainStrategy } from "./strategies/MainStrategy";
 import { ActionRejecter } from "./strategy";
 import { isDefined } from "./util";
 
-export const client = new PlayerHostClient(
-    process.env.SNAKE_HOST ?? "localhost:5168",
-    grpc.credentials.createInsecure()
-);
+function createRpcClient(): RpcClient {
+    const client = new PlayerHostClient(
+        process.env.SNAKE_HOST ?? "localhost:5168",
+        grpc.credentials.createInsecure()
+    );
 
-console.log("Subscribing...");
+    console.log("Subscribing...");
 
-const serverEvents = client.subscribeToServerEvents(new EmptyRequest());
-serverEvents.on("event", function (thing: ServerUpdateMessage) {
-    console.log("event", thing.toObject());
-});
+    const serverEvents = client.subscribeToServerEvents(new EmptyRequest());
+    serverEvents.on("event", function (thing: ServerUpdateMessage) {
+        console.log("event", thing.toObject());
+    });
 
-console.log("Subscribed");
+    console.log("Subscribed");
+    return new RpcClient(client);
+}
 
-const myClient = new MyClient(client);
+let myClient: Client;
+switch (process.env.SNAKE_PROTOCOL) {
+    case "grpc": {
+        myClient = createRpcClient();
+        break;
+    }
+    default:
+        console.error(
+            "Missing or invalid 'SNAKE_PROTOCOL'. Expected 'grpc' or 'ws'."
+        );
+        process.exit(1);
+}
 
 //const PLAYER_NAME = `ForTheWin_${random(0, 0xffff).toString(16)}`;
 const PLAYER_NAME = process.env.SNAKE_PLAYER ?? "ForTheWin";
 
 async function main() {
     await writeFile("./state.txt", "BOOT");
-    const gameSettings = await myClient.register({ playername: PLAYER_NAME });
+    const gameSettings = await myClient.register(PLAYER_NAME);
     console.log("gameSettings", gameSettings);
     const gameState = new GameState(
-        gameSettings.dimensionsList,
-        gameSettings.startaddressList,
+        gameSettings.dimensions,
+        gameSettings.startAddress,
         PLAYER_NAME,
-        gameSettings.playeridentifier,
-        gameSettings.gamestarted
+        gameSettings.gameStarted
     );
     const initialGameState = await myClient.getGameState();
     gameState.setState(initialGameState);
-    const gameUpdates = myClient.subscribe();
     const strategy = new MainStrategy(gameState);
     const actionRejecters = [
         new ActionRejecter([
@@ -63,18 +72,19 @@ async function main() {
     if (!gameState.running) {
         console.log("WAITING FOR START");
     }
+
+    const gameUpdates = myClient.subscribe();
     let lastFoodLogged: number = 0;
     let tickCount = 0;
-    gameUpdates.on("data", async function (rawUpdate: GameUpdateMessage) {
+    for await (const update of gameUpdates) {
         // console.debug("loop");
         if (!gameState.running) {
             console.log("STARTED");
             gameState.run();
         }
-        const update = rawUpdate.toObject();
         // console.log("update", update.updatedcellsList);
-        if (update.removedsnakesList.length > 0) {
-            console.log("removedSnakes", update.removedsnakesList);
+        if (update.removedSnakes.length > 0) {
+            console.log("removedSnakes", update.removedSnakes);
         }
         gameState.update(update);
         // const snakeAdminValidationErrors = gameState.validateSnakes();
@@ -164,7 +174,7 @@ async function main() {
             "./state.txt",
             [...overallText, strategyText, ""].join("\n")
         );
-    });
+    }
 }
 
 main().catch((err) => {

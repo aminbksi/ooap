@@ -2,15 +2,14 @@ import { Cell } from "./Cell";
 import { FoodManager } from "./FoodManager";
 import { Snake } from "./Snake";
 import { Action, ActionType } from "./action";
-import { Address, UUID } from "./common";
-import { GameStateMessage, GameUpdateMessage } from "./generated/player_pb";
+import { GameStateMessage, GameUpdateMessage } from "./client";
+import { Address } from "./common";
 import { Grid } from "./grid";
 import { isDefined } from "./util";
 
 export class GameState {
     grid: Grid;
     snakes: Snake[] = [];
-    playerIdentifier: string;
     playerName: string;
     startAddress: Address;
     foodManager = new FoodManager();
@@ -23,13 +22,11 @@ export class GameState {
         dims: number[],
         startAddress: Address,
         playerName: string,
-        playerIdentifier: UUID,
         running: boolean
     ) {
         this.startAddress = startAddress;
         this.grid = new Grid(dims);
         this.snakes.push(new Snake(playerName, [startAddress]));
-        this.playerIdentifier = playerIdentifier;
         this.playerName = playerName;
         this.savedSnakes = 0;
         this.running = running;
@@ -47,36 +44,36 @@ export class GameState {
         this.savedSnakes++;
     }
 
-    setState(gameState: GameStateMessage.AsObject): void {
-        for (const updatedCell of gameState.updatedcellsList) {
+    setState(gameState: GameStateMessage): void {
+        for (const updatedCell of gameState.updatedCells) {
             const cell = new Cell(
-                updatedCell.addressList,
-                updatedCell.foodvalue > 0,
+                updatedCell.address,
+                updatedCell.hasFood,
                 updatedCell.player
             );
-            this.grid.setCell(updatedCell.addressList, cell);
-            if (updatedCell.foodvalue > 0) {
-                this.foodManager.addFood(updatedCell.addressList);
+            this.grid.setCell(updatedCell.address, cell);
+            if (updatedCell.hasFood) {
+                this.foodManager.addFood(updatedCell.address);
             } else {
-                this.foodManager.removeFood(updatedCell.addressList);
+                this.foodManager.removeFood(updatedCell.address);
             }
         }
     }
 
-    update(gameUpdate: GameUpdateMessage.AsObject): void {
+    update(gameUpdate: GameUpdateMessage): void {
         this.enemyHeads = new Map();
         this.grid.clearOwnMarks();
-        for (const updatedCell of gameUpdate.updatedcellsList) {
+        for (const updatedCell of gameUpdate.updatedCells) {
             const cell = new Cell(
-                updatedCell.addressList,
-                updatedCell.foodvalue > 0,
+                updatedCell.address,
+                updatedCell.hasFood,
                 updatedCell.player
             );
-            this.grid.setCell(updatedCell.addressList, cell);
-            if (updatedCell.foodvalue > 0) {
-                this.foodManager.addFood(updatedCell.addressList);
+            this.grid.setCell(updatedCell.address, cell);
+            if (updatedCell.hasFood) {
+                this.foodManager.addFood(updatedCell.address);
             } else {
-                this.foodManager.removeFood(updatedCell.addressList);
+                this.foodManager.removeFood(updatedCell.address);
             }
             if (cell.player) {
                 let heads = this.enemyHeads.get(cell.player);
@@ -87,8 +84,8 @@ export class GameState {
                 heads.push(cell.address);
             }
         }
-        if (gameUpdate.removedsnakesList.length > 0) {
-            const removedSnakes = new Set(gameUpdate.removedsnakesList);
+        if (gameUpdate.removedSnakes.length > 0) {
+            const removedSnakes = new Set(gameUpdate.removedSnakes);
             const snakesBefore = this.snakes.length;
             this.snakes = this.snakes.filter(
                 (snake) =>

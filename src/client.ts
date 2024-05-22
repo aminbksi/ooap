@@ -1,87 +1,41 @@
-import * as grpc from "@grpc/grpc-js";
-import { promisify } from "util";
-import { client } from ".";
+import { ReadableStream } from "stream/web";
 import { Move, Split } from "./action";
-import { UUID } from "./common";
-import { PlayerHostClient } from "./generated/player_grpc_pb";
-import {
-    EmptyRequest,
-    GameSettings,
-    GameStateMessage,
-    GameUpdateMessage,
-    Move as MoveRequest,
-    RegisterRequest,
-    SplitRequest,
-    SubsribeRequest,
-} from "./generated/player_pb";
+import { Address } from "./common";
 
-export class MyClient {
-    playerIdentifier: UUID | undefined;
+export interface GameSettings {
+    dimensions: Address;
+    startAddress: Address;
+    playerIdentifier: string;
+    gameStarted: boolean;
+}
 
-    constructor(public client: PlayerHostClient) {}
+export interface GameStateMessage {
+    updatedCells: UpdatedCell[];
+}
 
-    public setPlayerIdentifier(id: UUID): void {
-        this.playerIdentifier = id;
-    }
+export interface UpdatedCell {
+    address: Address;
+    player?: string;
+    hasFood: boolean;
+}
 
-    public async register(
-        request: RegisterRequest.AsObject
-    ): Promise<GameSettings.AsObject> {
-        const req = new RegisterRequest();
-        req.setPlayername(request.playername);
-        const settings = (
-            await promisify<RegisterRequest, GameSettings>(
-                client.register.bind(client)
-            )(req)
-        ).toObject();
-        this.setPlayerIdentifier(settings.playeridentifier);
-        return settings;
-    }
+export interface GameUpdateMessage {
+    updatedCells: UpdatedCell[];
+    removedSnakes: string[];
+    playerScores: PlayerScore[];
+}
 
-    public async getGameState(): Promise<GameStateMessage.AsObject> {
-        const req = new EmptyRequest();
-        const gameState = (
-            await promisify<EmptyRequest, GameStateMessage>(
-                client.getGameState.bind(client)
-            )(req)
-        ).toObject();
-        return gameState;
-    }
+export interface PlayerScore {
+    playerName: string;
+    score: number;
+    snakes: number;
+}
 
-    public subscribe(): grpc.ClientReadableStream<GameUpdateMessage> {
-        const req = new SubsribeRequest();
-        if (!this.playerIdentifier) {
-            throw new Error("missing playerIdentifier");
-        }
-        req.setPlayeridentifier(this.playerIdentifier);
-        return client.subscribe(req);
-    }
+export interface Client {
+    register(playerName: string): Promise<GameSettings>;
+    getGameState(): Promise<GameStateMessage>;
 
-    public async splitSnake(request: Split): Promise<void> {
-        const req = new SplitRequest();
-        if (!this.playerIdentifier) {
-            throw new Error("missing playerIdentifier");
-        }
-        req.setPlayeridentifier(this.playerIdentifier);
-        req.setOldsnakename(request.oldSnakeName);
-        req.setNewsnakename(request.newSnakeName);
-        req.setSnakesegment(request.snakeSegment);
-        req.setNextlocationList(request.nextLocation);
-        await promisify<SplitRequest, EmptyRequest>(
-            client.splitSnake.bind(client)
-        )(req);
-    }
-
-    public async moveSnake(request: Move): Promise<void> {
-        const req = new MoveRequest();
-        if (!this.playerIdentifier) {
-            throw new Error("missing playerIdentifier");
-        }
-        req.setPlayeridentifier(this.playerIdentifier);
-        req.setSnakename(request.snakeName);
-        req.setNextlocationList(request.nextLocation);
-        await promisify<MoveRequest, EmptyRequest>(
-            client.makeMove.bind(client)
-        )(req);
-    }
+    subscribe(): ReadableStream<GameUpdateMessage>;
+    splitSnake(request: Split): Promise<void>;
+    moveSnake(request: Move): Promise<void>;
 }
