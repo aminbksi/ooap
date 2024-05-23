@@ -1,7 +1,9 @@
 import { GameState } from "../GameState";
 import { Snake } from "../Snake";
 import { Action } from "../action";
-import { distance, toFlat } from "../address";
+import { allSteps, distance, nextSteps, toFlat } from "../address";
+import { Address } from "../common";
+import { pickRandom } from "../util";
 import { TargetSnakeStrategy } from "./TargetSnakeStrategy";
 
 export class KillSnakeStrategy extends TargetSnakeStrategy {
@@ -61,6 +63,18 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
             return [];
         }
         return super.update();
+    }
+
+    determineNextStep(): Address | undefined {
+        const possibleNextSteps = nextSteps(this.snake.head, this.target);
+        let availableSteps =
+            this.gameState.grid.filterAvailable(possibleNextSteps, this.targetPlayerName);
+        if (availableSteps.length === 0) {
+            const allPossibleSteps = allSteps(this.snake.head, this.target);
+            availableSteps =
+                this.gameState.grid.filterAvailable(allPossibleSteps, this.targetPlayerName);
+        }
+        return pickRandom(availableSteps);
     }
 
     inspect(): string {

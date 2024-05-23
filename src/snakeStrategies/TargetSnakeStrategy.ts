@@ -21,7 +21,7 @@ export class TargetSnakeStrategy implements SnakeStrategy {
         return sameAddress(this.target, this.snake.head);
     }
 
-    update(): Action[] {
+    determineNextStep(): Address | undefined {
         const possibleNextSteps = nextSteps(this.snake.head, this.target);
         let availableSteps =
             this.gameState.grid.filterAvailable(possibleNextSteps);
@@ -30,7 +30,11 @@ export class TargetSnakeStrategy implements SnakeStrategy {
             availableSteps =
                 this.gameState.grid.filterAvailable(allPossibleSteps);
         }
-        const step = pickRandom(availableSteps);
+        return pickRandom(availableSteps);
+    }
+
+    update(): Action[] {
+        const step = this.determineNextStep();
         if (step) {
             this.gameState.grid.getCell(step).markAsOurs()
             return [
@@ -40,12 +44,6 @@ export class TargetSnakeStrategy implements SnakeStrategy {
                     nextLocation: step,
                 },
             ];
-        }
-        else {
-            this.snake.log(`No steps available (${availableSteps.length}) from`, possibleNextSteps)
-            possibleNextSteps.forEach(cell => {
-                this.snake.log(`Cell:`, cell, `, Player: "${this.gameState.grid.getCell(cell).player}"`)
-            });
         }
         return [];
     }

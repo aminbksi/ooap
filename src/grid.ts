@@ -34,11 +34,11 @@ export class Grid {
         return true;
     }
 
-    isCellAvailable(address: Address): boolean {
-        return (!this.getCell(address).player) && (!this.getCell(address).isMarkedAsOurs()) && this.checkBounds(address)
+    isCellAvailable(address: Address, allowedPlayer: string): boolean {
+        return ((!this.getCell(address).player) || (this.getCell(address).player === allowedPlayer)) && (!this.getCell(address).isMarkedAsOurs()) && this.checkBounds(address)
     }
 
-    filterAvailable(addresses: Address[]): Address[] {
-        return addresses.filter((addr): addr is Address => this.isCellAvailable(addr)) as Address[];
+    filterAvailable(addresses: Address[], allowedPlayer: string = ""): Address[] {
+        return addresses.filter((addr): addr is Address => this.isCellAvailable(addr, allowedPlayer)) as Address[];
     }
 }
