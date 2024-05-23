@@ -5,7 +5,6 @@ import { Address } from "./common";
 export interface GameSettings {
     dimensions: Address;
     startAddress: Address;
-    playerIdentifier: string;
     gameStarted: boolean;
 }
 
