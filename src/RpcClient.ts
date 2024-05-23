@@ -41,7 +41,6 @@ export class RpcClient implements Client {
         return {
             dimensions: settings.dimensionsList,
             startAddress: settings.startaddressList,
-            playerIdentifier: settings.playeridentifier,
             gameStarted: settings.gamestarted,
         };
     }
