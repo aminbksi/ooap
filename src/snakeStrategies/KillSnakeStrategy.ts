@@ -15,7 +15,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
     }
 
     private _pickTargetPlayer(): string | undefined {
-        const highestEnemies = [...this.gameState.enemyCellCounts.entries()];
+        const highestEnemies = [...this.gameState.enemyScore.entries()];
         highestEnemies.sort((e1, e2) => e2[1] - e1[1]);
         return highestEnemies[0]?.[0];
     }
@@ -72,6 +72,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
             this._pickTarget();
         }
         if (this.target[0] === -1) {
+            this.targetPlayerName = undefined;
             this.snake.target = undefined;
             return [];
         }
