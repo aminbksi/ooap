@@ -5,6 +5,7 @@ export class Snake {
     segments: Address[];
     name: string;
     kidcount = 0;
+    target: Address | undefined;
 
     constructor(name: string, segments: Address[]) {
         console.log(

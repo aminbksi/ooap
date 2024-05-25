@@ -3,7 +3,7 @@ import { Snake } from "../Snake";
 import { Action } from "../action";
 import { allSteps, distance, nextSteps, toFlat } from "../address";
 import { Address } from "../common";
-import { pickRandom } from "../util";
+import { isDefined, pickRandom } from "../util";
 import { TargetSnakeStrategy } from "./TargetSnakeStrategy";
 
 export class KillSnakeStrategy extends TargetSnakeStrategy {
@@ -21,7 +21,7 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
     }
 
     private _pickTarget(): void {
-        const targetName = this._pickTargetPlayer();
+        const targetName = this.targetPlayerName;
         if (!targetName || targetName === this.gameState.playerName) {
             this.targetPlayerName = undefined;
             this.target = [-1];
@@ -29,16 +29,21 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
             return;
         }
         this.targetPlayerName = targetName;
-        const playerCells = [...this.gameState.grid.cells.values()].filter(
+        const enemyPlayerCells = [...this.gameState.grid.cells.values()].filter(
             (cell) => cell.player === this.targetPlayerName
         );
-        playerCells.sort((c1, c2) => {
+
+        const otherKamikazeTargets = this.gameState.snakes.map(x => x.target).filter(isDefined);
+        
+        const untargetedEnemyPlayerCells = enemyPlayerCells.filter((cell) => !otherKamikazeTargets.find(item => cell.address === item));
+
+        untargetedEnemyPlayerCells.sort((c1, c2) => {
             return (
                 distance(c1.address, this.snake.head) -
                 distance(c2.address, this.snake.head)
             );
         });
-        this.target = playerCells[0]?.address ?? [-1];
+        this.target = untargetedEnemyPlayerCells[0]?.address ?? [-1];
         this.snake.log(`selected ${this.targetPlayerName} ${this.target}`);
     }
 
@@ -55,13 +60,25 @@ export class KillSnakeStrategy extends TargetSnakeStrategy {
                 this.snake.log("target lost, finding new one");
                 this.target = [-1];
             }
+            else {
+                // Update the target to keep selecting the closest cell of that player.
+                this._pickTarget();
+            }
         }
         if (this.target[0] === -1) {
+            if (!this.targetPlayerName) {
+                this.targetPlayerName = this._pickTargetPlayer();
+            } 
             this._pickTarget();
         }
         if (this.target[0] === -1) {
+            this.snake.target = undefined;
             return [];
         }
+        else {
+            this.snake.target = this.target;
+        }
+
         return super.update();
     }
 

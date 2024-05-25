@@ -18,13 +18,15 @@ export class MainStrategy implements Strategy {
 
     constructor(
         public gameState: GameState,
-        public saveLength: number = 10,
-        public kamikazeLength: number = saveLength - 3,
-        public desiredMainSnakes: number = 10,
-        public desiredKamikazeSnakes: number = 2
+        public saveLength: number = 15,
+        public kamikazeLength: number = 3,
+        public desiredMainSnakes: number = 20,
+        public desiredKamikazeSnakes: number = 4,
+        public foodPerSnake: number = 5,
     ) {}
 
     update(): Action[] {
+        this.splitCount = 0;
         this.cleanStrategies()
         return [
             ...this.executeKamikazeStrategies(),
@@ -109,7 +111,6 @@ export class MainStrategy implements Strategy {
 
     executeSplitStrategies(): Action[] {
         const actions: Action[] = [];
-        this.splitCount = 0;
         for (const snake of this.gameState.snakes) {
             if (
                 this.gameState.snakes.length + this.splitCount <
@@ -119,7 +120,7 @@ export class MainStrategy implements Strategy {
                 )
             ) {
                 // Only split if there is enough food left
-                if (this.gameState.snakes.length + this.splitCount < (this.gameState.foodManager.foods.size / 3)) {
+                if (this.gameState.snakes.length + this.splitCount < (this.gameState.foodManager.foods.size / this.foodPerSnake)) {
                     if (snake.length > 1) {
                         // Split when we have splittable snakes until we have enough snakes.
                         snake.log(`splitting`);
@@ -158,7 +159,7 @@ export class MainStrategy implements Strategy {
                 kamikazeCount + this.splitCount <
                 Math.min(
                     this.desiredKamikazeSnakes,
-                    this.gameState.enemyCellCounts.size
+                    this.gameState.enemyCellCount
                 )
             ) {
 
