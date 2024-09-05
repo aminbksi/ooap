@@ -14,5 +14,5 @@ export function pickRandom<T>(values: T[]): T | undefined {
 }
 
 export function random(from: number, to: number): number {
-    return Math.trunc(Math.random() * (to - from) + from);
+    return Math.round(Math.random() * (to - from) + from);
 }

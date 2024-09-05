@@ -16,7 +16,10 @@ export class GameState {
     savedSnakes: number;
     running: boolean;
     enemyCellCounts: Map<string, number> = new Map();
+    enemyCellCount: number;
     enemyHeads: Map<string, Address[]> = new Map();
+    enemySnakesCount: Map<string, number> = new Map(); 
+    enemyScore: Map<string, number> = new Map(); 
 
     constructor(
         dims: number[],
@@ -29,6 +32,7 @@ export class GameState {
         this.snakes.push(new Snake(playerName, [startAddress]));
         this.playerName = playerName;
         this.savedSnakes = 0;
+        this.enemyCellCount = 0;
         this.running = running;
     }
 
@@ -61,7 +65,17 @@ export class GameState {
     }
 
     update(gameUpdate: GameUpdateMessage): void {
+        this.enemySnakesCount.clear();
+        this.enemyScore.clear();
+        gameUpdate.playerScores.forEach(playerscore => {
+            if (playerscore.playerName !== this.playerName) {
+                this.enemySnakesCount.set(playerscore.playerName, playerscore.snakes);
+                this.enemyScore.set(playerscore.playerName, playerscore.score);
+            }
+        }); 
+        
         this.enemyHeads = new Map();
+        this.enemyCellCount = 0;
         this.grid.clearOwnMarks();
         for (const updatedCell of gameUpdate.updatedCells) {
             const cell = new Cell(
@@ -106,6 +120,8 @@ export class GameState {
             `Gamestate update: playernames count=${playerNames.length}`
         );
     
+        this.enemyCellCount = playerNames.length;
+
         this.enemyCellCounts = new Map();
         for (const name of playerNames) {
             const count = this.enemyCellCounts.get(name) ?? 0;
