@@ -5,7 +5,7 @@ import * as grpc from "@grpc/grpc-js";
 import { writeFile } from "fs/promises";
 import { GameState } from "./GameState";
 import { RpcClient } from "./RpcClient";
-import { ActionType } from "./action";
+import { Action, ActionType } from "./action";
 import { ExistingCellsCollisionChecker } from "./checkers/ExistingCellsCollisionChecker";
 import { NextActionCollisionActionsChecker } from "./checkers/NextActionCollisionActionsChecker";
 import { StartAddressChecker } from "./checkers/StartAddressChecker";
@@ -146,6 +146,14 @@ async function main() {
                     break;
             }
         }
+
+        // Send special 'player is done' move
+        const action : Action = {
+            type: ActionType.Move,
+            snakeName: "",
+            nextLocation: []
+        };
+        await myClient.moveSnake(action);
 
         const snakesWithMoves = new Set(
             filteredActions
