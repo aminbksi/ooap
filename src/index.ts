@@ -101,7 +101,7 @@ async function main() {
         }
         if (gameState.foodManager.foods.size === 0) {
             console.error("NO FOOD LEFT");
-            process.exit(2);
+            process.exit(0);
         }
         if (gameState.foodManager.foods.size !== lastFoodLogged) {
             lastFoodLogged = gameState.foodManager.foods.size;
