@@ -18,11 +18,12 @@ export class MainStrategy implements Strategy {
 
     constructor(
         public gameState: GameState,
-        public saveLength: number = 15,
+        public saveLength: number = 10,
+        public maxNumberOfSavingSnakes: number = 15,
         public kamikazeLength: number = 3,
-        public desiredMainSnakes: number = 20,
+        public desiredMainSnakes: number = 75,
         public desiredKamikazeSnakes: number = 4,
-        public foodPerSnake: number = 5,
+        public foodPerSnake: number = 3,
     ) {}
 
     update(): Action[] {
@@ -256,7 +257,7 @@ export class MainStrategy implements Strategy {
                 }
             }
             if (snakeStrat && !(snakeStrat instanceof SaveSnakeStrategy)) {
-                if ((this.nr_of_saving_snakes < 1) && (snake.length > this.saveLength)) {
+                if ((this.nr_of_saving_snakes < this.maxNumberOfSavingSnakes) && (snake.length > this.saveLength)) {
                     snake.log(`snake too long, saving`);
                     snakeStrat = new SaveSnakeStrategy(
                         this.gameState,
